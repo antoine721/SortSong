@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --accent: #7c5cff;
+}
+
+html,
+body {
+  height: 100%;
+  background: #0b0b0f;
+  color: #ececf1;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-feature-settings: "cv11", "ss01", "tnum" 0;
+  overflow: hidden;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a37 transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #2a2a37;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #3a3a4a;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+input[type="range"].range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #ececf1 var(--p, 0%), #2a2a37 var(--p, 0%));
+  cursor: pointer;
+}
+input[type="range"].range:hover {
+  background: linear-gradient(to right, var(--accent) var(--p, 0%), #2a2a37 var(--p, 0%));
+}
+input[type="range"].range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+input[type="range"].range:hover::-webkit-slider-thumb {
+  opacity: 1;
+}
+input[type="range"].range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.drop-target {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: rgba(124, 92, 255, 0.12);
+}
+
+@keyframes eq {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+.eq span {
+  display: inline-block;
+  width: 3px;
+  margin-right: 2px;
+  height: 12px;
+  background: var(--accent);
+  transform-origin: bottom;
+  animation: eq 0.9s ease-in-out infinite;
+  border-radius: 1px;
+}
+.eq span:nth-child(2) { animation-delay: -0.3s; }
+.eq span:nth-child(3) { animation-delay: -0.6s; }
+.eq.paused span { animation-play-state: paused; }
+
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.fadein { animation: fadein 0.16s ease-out; }
