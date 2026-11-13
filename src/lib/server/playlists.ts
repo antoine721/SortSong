@@ -14,11 +14,11 @@ export function parseRules(r: string | null): SmartRules | null {
 export async function playlistDTOs(userId: string): Promise<PlaylistDTO[]> {
   const pls = await prisma.playlist.findMany({ where: { userId }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] });
   const stats = await prisma.$queryRaw<{ playlistId: string; c: bigint | number; d: bigint | number | null }[]>`
-    SELECT pt.playlistId as playlistId, COUNT(*) as c, SUM(t.durationMs) as d
-    FROM PlaylistTrack pt JOIN Track t ON t.id = pt.trackId
-    JOIN Playlist p ON p.id = pt.playlistId
-    WHERE p.userId = ${userId}
-    GROUP BY pt.playlistId`;
+    SELECT pt."playlistId" as "playlistId", COUNT(*) as c, SUM(t."durationMs") as d
+    FROM "PlaylistTrack" pt JOIN "Track" t ON t.id = pt."trackId"
+    JOIN "Playlist" p ON p.id = pt."playlistId"
+    WHERE p."userId" = ${userId}
+    GROUP BY pt."playlistId"`;
   const sm = new Map(stats.map((s) => [s.playlistId, { c: Number(s.c), d: Number(s.d || 0) }]));
   return pls.map((p) => ({
     id: p.id,
@@ -37,10 +37,10 @@ export async function playlistDTOs(userId: string): Promise<PlaylistDTO[]> {
 
 export async function membershipMap(userId: string): Promise<Record<string, string[]>> {
   const rows = await prisma.$queryRaw<{ s: string; p: string }[]>`
-    SELECT t.spotifyId as s, pt.playlistId as p
-    FROM PlaylistTrack pt JOIN Track t ON t.id = pt.trackId
-    JOIN Playlist p ON p.id = pt.playlistId
-    WHERE p.userId = ${userId}`;
+    SELECT t."spotifyId" as s, pt."playlistId" as p
+    FROM "PlaylistTrack" pt JOIN "Track" t ON t.id = pt."trackId"
+    JOIN "Playlist" p ON p.id = pt."playlistId"
+    WHERE p."userId" = ${userId}`;
   const m: Record<string, string[]> = {};
   for (const r of rows) (m[r.s] ||= []).push(r.p);
   return m;
@@ -65,7 +65,7 @@ export async function smartTracks(userId: string, rules: SmartRules): Promise<Tr
   const lib = await prisma.libraryTrack.findMany({
     where: {
       userId,
-      status: rules.status ? rules.status : { not: "dismissed" },
+      status: rules.status ? rules.status : { notIn: ["dismissed", "deleted"] },
       track: {
         ...(rules.bpmMin || rules.bpmMax ? { bpm: { ...(rules.bpmMin ? { gte: rules.bpmMin } : {}), ...(rules.bpmMax ? { lte: rules.bpmMax } : {}) } } : {}),
         ...(rules.keys?.length ? { key: { in: rules.keys } } : {}),

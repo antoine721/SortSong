@@ -8,6 +8,8 @@ import { PlayerBar } from "./PlayerBar";
 import { RightPanel } from "./RightPanel";
 import { SearchOverlay } from "./SearchOverlay";
 import { Shortcuts } from "./Shortcuts";
+import { Scrobbler } from "./Scrobbler";
+import { LinkDialog } from "./LinkDialog";
 import { Sidebar } from "./Sidebar";
 import { Toasts } from "./Toasts";
 import { Button, Spinner } from "./ui";
@@ -61,6 +63,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <SearchOverlay />
       <Toasts />
       <Shortcuts />
+      <Scrobbler />
+      <LinkDialog />
     </div>
   );
 }

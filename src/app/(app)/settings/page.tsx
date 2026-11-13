@@ -1,8 +1,9 @@
 "use client";
-import { CheckCircle2, Download, Keyboard, LogOut, MonitorSpeaker, Play, Tags, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Download, Keyboard, Link2, LogOut, MonitorSpeaker, Play, Radio, Tags, Trash2, XCircle } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ImportButton } from "@/components/common";
-import { Button, Cover, Kbd, Spinner, cx } from "@/components/ui";
+import { Button, Cover, Kbd, Spinner, Toggle, cx } from "@/components/ui";
 import { api } from "@/lib/client/api";
 import { TAG_CATEGORIES, PLAYLIST_COLORS } from "@/lib/client/format";
 import { useApp } from "@/store/app";
@@ -19,6 +20,60 @@ export default function SettingsPage() {
   const [spPls, setSpPls] = useState<SpPl[] | null>(null);
   const [importing, setImporting] = useState<string | null>(null);
   const [bpmBusy, setBpmBusy] = useState<string | null>(null);
+  const [link, setLink] = useState("");
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [lfBusy, setLfBusy] = useState<string | null>(null);
+  const lfConfigured = useApp((s) => s.config.lastfm);
+  const params = useSearchParams();
+
+  useEffect(() => {
+    const st = params.get("lastfm");
+    if (st === "ok") useApp.getState().toast("Compte Last.fm connecté");
+    if (st === "error") useApp.getState().toast(`Connexion Last.fm refusée : ${params.get("msg") || ""}`, { tone: "err" });
+    if (st) history.replaceState(null, "", "/settings");
+  }, [params]);
+
+  const addLink = async () => {
+    setLinkBusy(true);
+    try {
+      await useApp.getState().importPlaylistLink(link);
+      setLink("");
+    } catch (e) {
+      useApp.getState().toast((e as Error).message, { tone: "err" });
+    } finally {
+      setLinkBusy(false);
+    }
+  };
+
+  const lfImport = async (kind: "loved" | "top") => {
+    setLfBusy("Connexion à Last.fm…");
+    try {
+      const res = await fetch("/api/lastfm/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, max: 500 }) });
+      if (!res.body) throw new Error("Pas de réponse");
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() || "";
+        for (const l of lines) {
+          if (!l.trim()) continue;
+          const m = JSON.parse(l);
+          if (m.type === "progress") setLfBusy(`${m.step}${m.total ? ` · ${m.done}/${m.total}` : ""}`);
+          if (m.type === "error") throw new Error(m.error);
+          if (m.type === "done") useApp.getState().toast(`${m.added} titre(s) ajouté(s) à « À trier » (${m.matched}/${m.scanned} trouvés sur Spotify)`);
+        }
+      }
+      await Promise.all([useApp.getState().bootstrap(), useApp.getState().loadLibrary(true)]);
+    } catch (e) {
+      useApp.getState().toast((e as Error).message, { tone: "err" });
+    } finally {
+      setLfBusy(null);
+    }
+  };
 
   const box = "rounded-2xl border border-line bg-bg-2/50 p-5";
   const h2 = "mb-4 flex items-center gap-2 text-lg font-bold";
@@ -191,8 +246,28 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="mt-6">
+          <h3 className="mb-2 flex items-center gap-2 font-semibold"><Link2 className="h-4 w-4 text-accent-2" /> Ajouter une playlist depuis son lien</h3>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (link.trim()) addLink();
+            }}
+            className="flex gap-2"
+          >
+            <input
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder="https://open.spotify.com/playlist/…"
+              className="h-10 flex-1 rounded-xl border border-line bg-bg-2 px-3 text-sm outline-none focus:border-accent"
+            />
+            <Button type="submit" variant="primary" disabled={linkBusy || !link.trim()}>
+              {linkBusy ? <Spinner /> : null} Ajouter
+            </Button>
+          </form>
+        </div>
+        <div className="mt-6">
           <div className="mb-2 flex items-center gap-3">
-            <h3 className="font-semibold">Importer une playlist Spotify comme playlist interne</h3>
+            <h3 className="font-semibold">Ou choisir parmi mes playlists Spotify</h3>
             {!spPls && <Button size="sm" onClick={loadSp}>Afficher mes playlists Spotify</Button>}
           </div>
           {spPls && (
@@ -220,6 +295,56 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+      </section>
+
+      <section className={box}>
+        <h2 className={h2}><Radio className="h-5 w-5 text-[#ff4b45]" /> Last.fm</h2>
+        {!lfConfigured ? (
+          <div className="flex flex-wrap items-center gap-3 text-sm text-fg-2">
+            Pas encore configuré (clé API gratuite).
+            <a href="/setup"><Button size="sm" variant="primary">Configurer Last.fm</Button></a>
+          </div>
+        ) : !me?.lastfm ? (
+          <div className="flex flex-wrap items-center gap-3 text-sm text-fg-2">
+            <span className="flex-1">Connecte ton compte pour scrobbler tes écoutes et importer tes titres aimés. Les mix utilisent déjà Last.fm.</span>
+            <a href="/api/lastfm/login">
+              <Button className="!bg-[#d51007] !text-white hover:!bg-[#ee1d14]">Se connecter avec Last.fm</Button>
+            </a>
+          </div>
+        ) : (
+          <div className="space-y-4 text-sm">
+            <div className="flex flex-wrap items-center gap-3">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              <span className="flex-1">
+                Connecté en tant que{" "}
+                <a href={`https://www.last.fm/user/${me.lastfm.user}`} target="_blank" className="font-semibold text-fg hover:underline">{me.lastfm.user}</a>
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={async () => {
+                  await api("/api/lastfm/disconnect", { method: "POST" });
+                  await useApp.getState().bootstrap();
+                }}
+              >
+                Déconnecter
+              </Button>
+            </div>
+            <Toggle
+              checked={me.lastfm.scrobble}
+              onChange={async (v) => {
+                await api("/api/lastfm/settings", { json: { scrobble: v } });
+                useApp.setState({ me: { ...me, lastfm: { ...me.lastfm!, scrobble: v } } });
+              }}
+              label="Scrobbler ce que j'écoute dans SortSong"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" onClick={() => lfImport("loved")} disabled={!!lfBusy}>Importer mes titres aimés ♥ dans « À trier »</Button>
+              <Button size="sm" onClick={() => lfImport("top")} disabled={!!lfBusy}>Importer mes 500 titres les plus écoutés</Button>
+              {lfBusy && <span className="flex items-center gap-2 text-xs text-fg-3"><Spinner /> {lfBusy}</span>}
+            </div>
+          </div>
+        )}
       </section>
 
       <section className={box}>

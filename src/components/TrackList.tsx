@@ -1,6 +1,6 @@
 "use client";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowDown, ArrowUp, Clock, GripVertical, MoreHorizontal, Pause, Play, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, Clock, GripVertical, MinusCircle, MoreHorizontal, Pause, Play, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { TrackDTO } from "@/lib/types";
@@ -22,6 +22,7 @@ type Opts = {
   showCover?: boolean;
   playlistId?: string; // contexte (retrait, notes, réordonnancement)
   reorderable?: boolean;
+  deletable?: boolean; // bouton « supprimer de la bibliothèque » sur chaque ligne
 };
 
 export function TrackList({
@@ -154,7 +155,7 @@ function Header({ sort, onSort, showAlbum, showAdded, showNote, showIndex, reord
       <H k="duration" className="w-11 justify-end">
         <Clock className="h-3.5 w-3.5" />
       </H>
-      <span className="w-[72px]" />
+      <span className="w-[104px]" />
     </div>
   );
 }
@@ -173,6 +174,7 @@ const TrackRow = memo(function TrackRow({
   showCover,
   playlistId,
   reorderable,
+  deletable,
 }: Opts & {
   track: TrackDTO;
   index: number;
@@ -290,7 +292,26 @@ const TrackRow = memo(function TrackRow({
       </div>
       {showAdded && <div className="hidden w-24 truncate text-xs text-fg-3 xl:block">{fmtDate(track.addedAt)}</div>}
       <div className="w-11 text-right text-[13px] text-fg-2 tnum">{fmtDuration(track.durationMs)}</div>
-      <div className="flex w-[72px] items-center justify-end gap-0.5">
+      <div className="flex w-[104px] items-center justify-end gap-0.5">
+        {playlistId ? (
+          <button
+            title="Retirer de cette playlist"
+            onClick={() => useApp.getState().removeFromPlaylists(track, [playlistId])}
+            className="grid h-8 w-8 place-items-center rounded-full text-fg-3 opacity-0 transition hover:bg-red-500/15 hover:text-red-300 group-hover:opacity-100"
+          >
+            <MinusCircle className="h-[18px] w-[18px]" />
+          </button>
+        ) : deletable ? (
+          <button
+            title="Supprimer de la bibliothèque"
+            onClick={() => useApp.getState().deleteTracks([track])}
+            className="grid h-8 w-8 place-items-center rounded-full text-fg-3 opacity-0 transition hover:bg-red-500/15 hover:text-red-300 group-hover:opacity-100"
+          >
+            <Trash2 className="h-[17px] w-[17px]" />
+          </button>
+        ) : (
+          <span className="w-8" />
+        )}
         <button
           title="Ajouter à une playlist"
           onClick={(e) => {

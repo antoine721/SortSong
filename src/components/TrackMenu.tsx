@@ -1,5 +1,5 @@
 "use client";
-import { Album, Ban, ExternalLink, Info, ListEnd, ListPlus, MicVocal, MinusCircle, Sparkles } from "lucide-react";
+import { Album, Ban, ExternalLink, Trash2, Info, ListEnd, ListPlus, MicVocal, MinusCircle, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { TrackDTO } from "@/lib/types";
 import { useApp } from "@/store/app";
@@ -76,6 +76,14 @@ export function TrackMenu({
       <MenuItem icon={<ExternalLink />} onClick={run(() => window.open(`https://open.spotify.com/track/${track.id}`, "_blank"))}>
         Ouvrir dans Spotify
       </MenuItem>
+      {inLib && (
+        <>
+          <div className="my-1 h-px bg-line" />
+          <MenuItem icon={<Trash2 />} danger onClick={run(() => useApp.getState().deleteTracks([track]))}>
+            Supprimer de la bibliothèque
+          </MenuItem>
+        </>
+      )}
     </Popover>
   );
 }

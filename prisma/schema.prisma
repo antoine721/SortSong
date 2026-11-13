@@ -19,6 +19,9 @@ model User {
   accessExpiresAt   DateTime
   authorizedAt      DateTime  @default(now())
   lastSyncAt        DateTime?
+  lastfmUser        String?
+  lastfmSessionEnc  String?
+  scrobble          Boolean   @default(false)
   createdAt         DateTime  @default(now())
   library           LibraryTrack[]
   folders           Folder[]
@@ -148,4 +151,10 @@ model ArtistCache {
   key       String   @id
   data      String
   createdAt DateTime @default(now())
+}
+
+/** Réglages de l'instance saisis dans l'écran /setup (les variables d'environnement restent prioritaires). */
+model AppConfig {
+  key   String @id
+  value String
 }

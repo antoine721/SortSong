@@ -2,11 +2,13 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { prisma } from "./db";
 import { sign, unsign } from "./crypto";
+import { ensureSecret } from "./config";
 
 export const SESSION_COOKIE = "ss_session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 182; // ~6 mois, comme le jeton Spotify
 
 export async function getUserId(): Promise<string | null> {
+  await ensureSecret();
   const store = await cookies();
   return unsign(store.get(SESSION_COOKIE)?.value);
 }

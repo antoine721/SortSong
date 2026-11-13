@@ -1,9 +1,9 @@
 import crypto from "node:crypto";
 
+import { loadedSecret } from "./config";
+
 function key(): Buffer {
-  const secret = process.env.APP_SECRET;
-  if (!secret || secret.length < 16) throw new Error("APP_SECRET manquant ou trop court (.env)");
-  return crypto.createHash("sha256").update(secret).digest();
+  return crypto.createHash("sha256").update(loadedSecret()).digest();
 }
 
 export function encrypt(plain: string): string {

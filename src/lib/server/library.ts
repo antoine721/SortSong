@@ -147,3 +147,13 @@ export async function importSpotifyPlaylist(userId: string, spotifyPlaylistId: s
   await refreshStatus(userId, [...seen]);
   return { id: pl.id, count: data.length };
 }
+
+/** Extrait l'ID d'une playlist depuis un lien Spotify (open.spotify.com/…/playlist/ID, spotify:playlist:ID ou l'ID seul). */
+export function parsePlaylistLink(input: string): string | null {
+  const s = input.trim();
+  const m =
+    /open\.spotify\.com\/(?:[a-z-]+\/)*playlist\/([A-Za-z0-9]{22})/.exec(s) ||
+    /spotify:playlist:([A-Za-z0-9]{22})/.exec(s) ||
+    /^([A-Za-z0-9]{22})$/.exec(s);
+  return m ? m[1] : null;
+}

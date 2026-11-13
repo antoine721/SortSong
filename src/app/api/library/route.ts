@@ -6,7 +6,7 @@ import { rowToDTO } from "@/lib/server/tracks";
 export const GET = handler(async () => {
   const user = await requireUser();
   const rows = await prisma.libraryTrack.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id, status: { not: "deleted" } },
     include: { track: { include: { tags: { select: { tagId: true } } } } },
     orderBy: { addedAt: "desc" },
   });

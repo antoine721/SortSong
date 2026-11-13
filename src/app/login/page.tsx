@@ -1,11 +1,11 @@
 import { Disc3, FolderTree, Search, Sparkles, Tags } from "lucide-react";
 
 const ERRORS: Record<string, string> = {
-  config: "SPOTIFY_CLIENT_ID est absent du fichier .env.",
+  config: "Spotify n'est pas encore configuré.",
   state: "La connexion a expiré, recommence.",
   access_denied: "Autorisation refusée sur Spotify.",
   not_allowed: "Ce compte n'est pas autorisé : ajoute-le dans le tableau de bord développeur Spotify (User Management).",
-  token: "Échange du jeton refusé. Vérifie l'adresse de retour (http://127.0.0.1:3000/api/auth/callback).",
+  token: "Échange du jeton refusé. Vérifie que l'adresse de retour affichée dans « Configurer » est bien déclarée sur Spotify.",
   profile: "Impossible de lire ton profil Spotify.",
   expired: "Ta session Spotify a expiré (6 mois) : reconnecte-toi, tes playlists et dossiers sont intacts.",
 };
@@ -39,7 +39,10 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden><path d="M12 0a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm5.5 17.3a.75.75 0 0 1-1 .25c-2.86-1.75-6.46-2.14-10.7-1.17a.75.75 0 1 1-.33-1.46c4.64-1.06 8.62-.6 11.8 1.35.36.22.47.68.24 1.03Zm1.47-3.27a.94.94 0 0 1-1.29.31c-3.27-2-8.26-2.6-12.13-1.42a.94.94 0 1 1-.55-1.8c4.42-1.34 9.92-.69 13.66 1.61.44.27.58.85.31 1.3Zm.13-3.4C15.18 8.3 8.73 8.08 5 9.21a1.13 1.13 0 1 1-.65-2.16c4.28-1.3 11.4-1.05 15.9 1.62a1.13 1.13 0 0 1-1.15 1.95Z" /></svg>
           Se connecter avec Spotify
         </a>
-        <p className="mt-4 text-center text-xs text-fg-3">Compte Premium requis · session conservée 6 mois</p>
+        <p className="mt-4 text-center text-xs text-fg-3">
+          Compte Premium requis · session conservée 6 mois ·{" "}
+          <a href="/setup" className="underline hover:text-fg-2">Configurer Spotify / Last.fm</a>
+        </p>
       </div>
     </main>
   );

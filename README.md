@@ -8,25 +8,39 @@ Rien n'est écrit dans Spotify, sauf l'export volontaire d'une playlist (bouton 
 
 Prérequis : Node 20+, un compte **Spotify Premium**.
 
-1. Crée une app sur <https://developer.spotify.com/dashboard> :
-   - *Redirect URI* : `http://127.0.0.1:3000/api/auth/callback` (localhost est refusé par Spotify) ;
-   - coche **Web API** et **Web Playback SDK** ;
-   - dans *User Management*, ajoute ton compte (5 comptes max en mode développement).
-2. Configure l'environnement :
-   ```bash
-   cp .env.example .env
-   # remplis SPOTIFY_CLIENT_ID, APP_SECRET (openssl rand -hex 32) et, conseillé, LASTFM_API_KEY
-   ```
-3. Installe et lance :
-   ```bash
-   npm install
-   npx prisma db push
-   npm run dev
-   ```
-4. Ouvre **http://127.0.0.1:3000** (pas `localhost`, sinon le cookie de connexion ne suit pas) et connecte-toi.
+```bash
+npm install
+npm run dev
+```
 
-La clé Last.fm (gratuite : <https://www.last.fm/api/account/create>) améliore beaucoup « Mix inspiré de » et les artistes proches.
-Sans elle, l'app utilise uniquement le catalogue public Deezer.
+Ouvre **http://127.0.0.1:3000** : l'écran **Configuration** te guide pas à pas (rien à éditer à la main).
+1. **Spotify** : crée une app sur le tableau de bord développeur, colle l'adresse de retour affichée,
+   ajoute ton compte dans *User Management*, colle le Client ID → « Enregistrer et se connecter avec Spotify ».
+2. **Last.fm** (facultatif, conseillé) : crée une clé API, colle la *Callback URL* affichée, la clé et le shared secret
+   → « Se connecter avec Last.fm ». Tu peux alors scrobbler tes écoutes et importer tes titres aimés (Réglages).
+
+La base de données (SQLite) est créée et mise à jour automatiquement à chaque lancement.
+
+## Mettre l'app en ligne
+
+1. Crée une base Postgres gratuite (Neon, Supabase…) et récupère son URL `postgres://…`.
+2. Déploie le dépôt sur Vercel (ou tout hébergeur Node) avec la variable `DATABASE_URL` = cette URL
+   (le build bascule tout seul sur Postgres et crée les tables).
+3. Ouvre `https://ton-app…/setup` : l'adresse de retour Spotify et la Callback URL Last.fm affichées sont celles du site en ligne ;
+   déclare-les dans Spotify / Last.fm (tu peux garder aussi celles en 127.0.0.1 pour le local).
+
+Sécurité : l'écran de configuration n'est modifiable que tant que Spotify n'est pas configuré, puis uniquement une fois connecté.
+Note Vercel : l'import d'une très grosse bibliothèque peut dépasser la durée maximale d'une fonction sur l'offre gratuite ;
+relance « Resynchroniser », l'import reprend là où il s'est arrêté.
+
+## Ajouter / supprimer
+
+- **Playlist depuis un lien** : bouton **+** de la barre latérale → « Depuis un lien Spotify… » (ou Réglages), colle
+  `https://open.spotify.com/playlist/…`. Une copie interne est créée ; la playlist Spotify n'est pas touchée.
+- **Retirer un titre d'une playlist** : icône ⊖ au survol de la ligne, ou menu ⋯.
+- **Supprimer un titre de la bibliothèque** : icône corbeille au survol (Bibliothèque, À trier), bouton « Supprimer » en mode
+  un par un, ou menu ⋯ → « Supprimer de la bibliothèque ». Il est retiré de toutes les playlists et ne revient pas à la
+  resynchronisation. Ctrl+Z ou « Annuler » le restaure à l'identique.
 
 ## Ce qui est livré
 

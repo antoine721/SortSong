@@ -1,5 +1,5 @@
 "use client";
-import { Ban, Inbox as InboxIcon, LayoutList, Play, Plus, SkipForward, Square, Sparkles } from "lucide-react";
+import { Ban, Trash2, Inbox as InboxIcon, LayoutList, Play, Plus, SkipForward, Square, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ImportButton, PageHeader, PlayButtons } from "@/components/common";
@@ -78,7 +78,7 @@ export default function InboxPage() {
             Resynchronise pour récupérer tes nouveaux likes, ou découvre des titres avec un <b>Mix inspiré de</b>.
           </Empty>
         ) : mode === "list" ? (
-          <TrackList tracks={inbox} label="À trier" showAlbum showAdded />
+          <TrackList tracks={inbox} label="À trier" showAlbum showAdded deletable />
         ) : (
           <Focus inbox={inbox} />
         )}
@@ -207,8 +207,19 @@ function Focus({ inbox }: { inbox: TrackDTO[] }) {
             <Button variant="ghost" onClick={next}>
               <SkipForward className="h-4 w-4" /> Passer
             </Button>
-            <Button variant="danger" onClick={dismiss}>
+            <Button variant="danger" onClick={dismiss} title="Reste dans la bibliothèque, mais sort de « À trier »">
               <Ban className="h-4 w-4" /> Écarter
+            </Button>
+            <Button
+              variant="ghost"
+              title="Supprimer de la bibliothèque (Ctrl+Z pour annuler)"
+              onClick={() => {
+                const rest = inbox.filter((t) => t.id !== focus.id);
+                useApp.getState().deleteTracks([focus]);
+                if (rest[focusIndex] || rest[0]) usePlayer.getState().playList(rest, rest[focusIndex] ? focusIndex : 0, "À trier");
+              }}
+            >
+              <Trash2 className="h-4 w-4" /> Supprimer
             </Button>
           </div>
         </div>

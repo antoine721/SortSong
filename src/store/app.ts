@@ -57,6 +57,9 @@ type State = {
   deleteFolder: (id: string) => Promise<void>;
   reorderPlaylist: (playlistId: string, order: string[], prev: string[]) => Promise<void>;
   createTag: (name: string, category: string, color?: string) => Promise<TagDTO>;
+  deleteTracks: (tracks: TrackDTO[]) => Promise<void>;
+  importPlaylistLink: (url: string, folderId?: string | null) => Promise<string>;
+  linkDialog: { folderId: string | null } | null;
 };
 
 const bump = (v: Record<string, number>, ids: string[]) => {
@@ -88,6 +91,7 @@ export const useApp = create<State>((set, get) => ({
   mobileNav: false,
   toasts: [],
   undoStack: [],
+  linkDialog: null,
 
   set: (p) => set(p),
 
@@ -395,6 +399,66 @@ export const useApp = create<State>((set, get) => ({
       await api(`/api/playlists/${playlistId}/tracks`, { method: "PATCH", json: { order: prev } });
       set({ playlistVersion: bump(get().playlistVersion, [playlistId]) });
     });
+  },
+
+  deleteTracks: async (tracks) => {
+    if (!tracks.length) return;
+    const s = get();
+    const ids = new Set(tracks.map((t) => t.id));
+    const prevMembership = s.membership;
+    const prevPlaylists = s.playlists;
+    const prevLib = s.libTracks;
+    const membership = { ...s.membership };
+    const touched = new Set<string>();
+    for (const t of tracks) {
+      for (const pid of membership[t.id] || []) touched.add(pid);
+      delete membership[t.id];
+    }
+    const library = new Set(s.library);
+    tracks.forEach((t) => library.delete(t.id));
+    set({
+      membership,
+      library,
+      libTracks: s.libTracks?.filter((t) => !ids.has(t.id)) ?? null,
+      playlists: s.playlists.map((p) => {
+        const n = tracks.filter((t) => prevMembership[t.id]?.includes(p.id));
+        return n.length ? { ...p, count: p.count - n.length, durationMs: p.durationMs - n.reduce((a, t) => a + t.durationMs, 0) } : p;
+      }),
+    });
+    let snapshot: unknown;
+    try {
+      const r = await api<{ snapshot: unknown; inboxCount: number }>("/api/library/delete", { json: { ids: [...ids] } });
+      snapshot = r.snapshot;
+      set({ inboxCount: r.inboxCount, playlistVersion: bump(get().playlistVersion, [...touched]) });
+    } catch (e) {
+      set({ membership: prevMembership, playlists: prevPlaylists, libTracks: prevLib });
+      get().toast(`Suppression impossible : ${(e as Error).message}`, { tone: "err" });
+      return;
+    }
+    const label = tracks.length > 1 ? `${tracks.length} morceaux` : `« ${tracks[0].title} »`;
+    get().pushUndo(`suppression de ${label}`, async () => {
+      const r = await api<{ inboxCount: number }>("/api/library/restore", { json: { snapshot } });
+      set({ membership: { ...get().membership, ...Object.fromEntries(tracks.map((t) => [t.id, prevMembership[t.id]]).filter(([, v]) => v)) }, inboxCount: r.inboxCount });
+      const lib2 = new Set(get().library);
+      tracks.forEach((t) => lib2.add(t.id));
+      set({ library: lib2, playlistVersion: bump(get().playlistVersion, [...touched]) });
+      await Promise.all([get().bootstrap(), get().loadLibrary(true)]);
+    });
+    get().toast(`${label} supprimé${tracks.length > 1 ? "s" : ""} de ta bibliothèque`, { undo: true });
+  },
+
+  importPlaylistLink: async (url, folderId = null) => {
+    const r = await api<{ id: string; count: number }>("/api/spotify/playlists/link", { json: { url, folderId } });
+    await get().bootstrap();
+    get().loadLibrary(true).catch(() => {});
+    const name = get().playlists.find((p) => p.id === r.id)?.name || "Playlist";
+    get().pushUndo(`ajout de « ${name} »`, async () => {
+      set({ playlists: get().playlists.filter((p) => p.id !== r.id) });
+      await api(`/api/playlists/${r.id}`, { method: "DELETE" });
+      await get().bootstrap();
+    });
+    get().toast(`« ${name} » ajoutée (${r.count} titres)`, { undo: true });
+    return r.id;
   },
 
   createTag: async (name, category, color) => {

@@ -4,11 +4,11 @@
   "private": true,
   "description": "Surcouche Spotify pour DJ : écouter, ranger, retrouver et découvrir des morceaux.",
   "scripts": {
-    "dev": "next dev -H 127.0.0.1 -p 3000",
-    "build": "prisma generate && next build",
-    "start": "next start -H 127.0.0.1 -p 3000",
+    "dev": "node scripts/prepare-db.mjs && next dev -H 127.0.0.1 -p 3000",
+    "build": "node scripts/prepare-db.mjs --generate && next build",
+    "start": "node scripts/prepare-db.mjs && next start -H ${HOST:-127.0.0.1} -p ${PORT:-3000}",
     "typecheck": "tsc --noEmit",
-    "db:push": "prisma db push",
+    "db:push": "node scripts/prepare-db.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

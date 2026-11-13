@@ -1,6 +1,6 @@
 "use client";
 import {
-  ChevronRight, Disc3, Folder, FolderOpen, FolderPlus, Inbox, Library, ListMusic, MoreHorizontal, Pencil, Plus, Search, Settings, Sparkles, Trash2, Wand2, X,
+  ChevronRight, Disc3, Link2, Folder, FolderOpen, FolderPlus, Inbox, Library, ListMusic, MoreHorizontal, Pencil, Plus, Search, Settings, Sparkles, Trash2, Wand2, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -126,6 +126,9 @@ export function Sidebar() {
             </MenuItem>
             <MenuItem icon={<Wand2 />} onClick={() => (setNewMenu(null), createPlaylist(null, true))}>
               Playlist intelligente
+            </MenuItem>
+            <MenuItem icon={<Link2 />} onClick={() => (setNewMenu(null), useApp.setState({ linkDialog: { folderId: null } }))}>
+              Depuis un lien Spotify…
             </MenuItem>
           </Popover>
         )}
@@ -261,6 +264,7 @@ function FolderRow({
           <MenuItem icon={<Pencil />} onClick={() => (setMenu(null), setRenaming(true))}>Renommer</MenuItem>
           <MenuItem icon={<ListMusic />} onClick={() => (setMenu(null), onNewPlaylist(folder.id))}>Nouvelle playlist ici</MenuItem>
           <MenuItem icon={<Sparkles />} onClick={() => (setMenu(null), onNewPlaylist(folder.id, true))}>Playlist intelligente ici</MenuItem>
+          <MenuItem icon={<Link2 />} onClick={() => (setMenu(null), useApp.setState({ linkDialog: { folderId: folder.id } }))}>Playlist depuis un lien ici</MenuItem>
           <MenuItem icon={<FolderPlus />} onClick={() => (setMenu(null), app().createFolder({ parentId: folder.id }), app().updateFolder(folder.id, { collapsed: false }, { record: false }))}>
             Nouveau sous-dossier
           </MenuItem>

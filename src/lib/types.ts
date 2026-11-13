@@ -85,6 +85,7 @@ export type MeDTO = {
   authorizedAt: string;
   expiresSoon: boolean;
   lastSyncAt: string | null;
+  lastfm: { user: string; scrobble: boolean } | null;
 };
 
 export type BootstrapDTO = {

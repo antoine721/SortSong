@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { decrypt, encrypt } from "./crypto";
 import { HttpError } from "./session";
+import { getConfig } from "./config";
 import type { AlbumDTO, ArtistDTO, TrackDTO } from "../types";
 
 export const SPOTIFY_SCOPES = [
@@ -21,14 +22,10 @@ export const SPOTIFY_SCOPES = [
 const API = "https://api.spotify.com/v1";
 const ACCOUNTS = "https://accounts.spotify.com";
 
-export function clientId() {
-  const id = process.env.SPOTIFY_CLIENT_ID;
-  if (!id) throw new HttpError(500, "SPOTIFY_CLIENT_ID manquant dans .env", "config");
+export async function clientId() {
+  const id = (await getConfig()).spotifyClientId;
+  if (!id) throw new HttpError(500, "Client ID Spotify non configuré (écran /setup)", "config");
   return id;
-}
-
-export function redirectUri() {
-  return process.env.SPOTIFY_REDIRECT_URI || "http://127.0.0.1:3000/api/auth/callback";
 }
 
 type TokenResponse = {
@@ -40,15 +37,15 @@ type TokenResponse = {
   error_description?: string;
 };
 
-export async function exchangeCode(code: string, verifier: string): Promise<TokenResponse> {
+export async function exchangeCode(code: string, verifier: string, redirectUri: string): Promise<TokenResponse> {
   const res = await fetch(`${ACCOUNTS}/api/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "authorization_code",
       code,
-      redirect_uri: redirectUri(),
-      client_id: clientId(),
+      redirect_uri: redirectUri,
+      client_id: await clientId(),
       code_verifier: verifier,
     }),
   });
@@ -74,7 +71,7 @@ export async function getAccessToken(userId: string): Promise<string> {
       body: new URLSearchParams({
         grant_type: "refresh_token",
         refresh_token: decrypt(user.refreshTokenEnc),
-        client_id: clientId(),
+        client_id: await clientId(),
       }),
     });
     const json = (await res.json()) as TokenResponse;

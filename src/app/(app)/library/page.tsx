@@ -248,7 +248,7 @@ export default function LibraryPage() {
       </div>
 
       <div className="px-2 pb-10 md:px-6">
-        <TrackList tracks={filtered} label="Bibliothèque" sort={sort} onSort={setSort} showAlbum showAdded emptyText="Aucun morceau ne correspond à ces filtres." />
+        <TrackList tracks={filtered} label="Bibliothèque" sort={sort} onSort={setSort} showAlbum showAdded deletable emptyText="Aucun morceau ne correspond à ces filtres." />
       </div>
     </div>
   );
