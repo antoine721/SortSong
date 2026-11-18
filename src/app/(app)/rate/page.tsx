@@ -9,6 +9,7 @@ import type { TrackDTO } from "@/lib/types";
 import { useApp, type LibTrack } from "@/store/app";
 import { usePlayer } from "@/store/player";
 
+const START_MS = 30_000;
 const LABELS = ["Pas pour moi", "Bof", "Moyen", "Bien", "Très bien", "Pépite"];
 
 /**
@@ -62,7 +63,9 @@ export default function RatePage() {
       const rest = list.slice(i).filter((t) => given[t.id] !== 0);
       const t = list[i];
       lastPlayed.current = t.id;
-      usePlayer.getState().playList(rest.length ? rest : [t], 0, "Noter", fromDrop ? t.durationMs / 2 : undefined);
+      // Départ à 30 s (ou au milieu si « Démarrer au drop »), sauf pour les titres trop courts.
+      const startMs = fromDrop ? t.durationMs / 2 : t.durationMs > START_MS + 15000 ? START_MS : 0;
+      usePlayer.getState().playList(rest.length ? rest : [t], 0, "Noter", startMs);
     },
     [list, given, fromDrop],
   );
@@ -139,7 +142,7 @@ export default function RatePage() {
           </span>
           <div className="ml-auto flex flex-wrap items-center gap-4 text-white/90 [&_span]:!text-white/90">
             <Toggle checked={autoplay} onChange={(v) => (setAutoplay(v), persist("ss_rate_autoplay", v))} label="Lecture auto" />
-            <Toggle checked={fromDrop} onChange={(v) => (setFromDrop(v), persist("ss_rate_drop", v))} label="Démarrer au drop" />
+            <Toggle checked={fromDrop} onChange={(v) => (setFromDrop(v), persist("ss_rate_drop", v))} label="Démarrer au drop (sinon à 0:30)" />
           </div>
         </div>
 

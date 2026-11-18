@@ -38,7 +38,7 @@ relance « Resynchroniser », l'import reprend là où il s'est arrêté.
 - **Import uniquement par lien Spotify** : bouton « Importer un lien Spotify » (barre latérale). Colle un ou plusieurs liens de
   playlist, d'album ou de titre (un par ligne). Les morceaux arrivent **non notés** ; tes likes et tes playlists Spotify ne sont
   jamais importés automatiquement. Option : créer aussi une playlist interne avec ces titres.
-- **Noter** : un morceau à la fois en carrousel, lecture automatique (option « Démarrer au drop »).
+- **Noter** : un morceau à la fois en carrousel, lecture automatique à partir de 0:30 (option « Démarrer au drop » pour partir du milieu).
 
   | Touche | Action |
   | --- | --- |
