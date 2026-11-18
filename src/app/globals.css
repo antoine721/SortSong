@@ -4,14 +4,62 @@
 
 :root {
   color-scheme: dark;
-  --accent: #7c5cff;
+  --bg: 11 11 15;
+  --bg-1: 17 17 24;
+  --bg-2: 23 23 31;
+  --bg-3: 31 31 42;
+  --bg-4: 42 42 55;
+  --line: 38 38 50;
+  --fg: 236 236 241;
+  --fg-2: 161 161 176;
+  --fg-3: 107 107 123;
+  --accent: 124 92 255;
+  --accent-2: 155 131 255;
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --range-fill: 236 236 241;
+}
+
+/* Mode discret : portail d'entreprise clair, éléments petits et sobres. */
+html.discreet {
+  color-scheme: light;
+  font-size: 13px; /* tout ce qui est en rem rétrécit (~-20 %) */
+  --bg: 244 245 247;
+  --bg-1: 255 255 255;
+  --bg-2: 248 249 251;
+  --bg-3: 240 242 245;
+  --bg-4: 228 231 236;
+  --line: 229 231 235;
+  --fg: 31 41 55;
+  --fg-2: 75 85 99;
+  --fg-3: 156 163 175;
+  --accent: 26 145 218;
+  --accent-2: 21 120 190;
+  --shadow-soft: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --range-fill: 26 145 218;
+}
+/* Covers en sourdine : on ne reconnaît la musique qu'en s'approchant (couleur au survol). */
+html.discreet img {
+  filter: grayscale(0.9) contrast(0.9);
+  opacity: 0.85;
+  transition: filter 0.2s, opacity 0.2s;
+}
+html.discreet img:hover,
+html.discreet .reveal img {
+  filter: none;
+  opacity: 1;
+}
+html.discreet .discreet-hide {
+  display: none !important;
+}
+html:not(.discreet) .discreet-only {
+  display: none !important;
 }
 
 html,
 body {
   height: 100%;
-  background: #0b0b0f;
-  color: #ececf1;
+  background: rgb(var(--bg));
+  color: rgb(var(--fg));
   -webkit-font-smoothing: antialiased;
 }
 
@@ -22,20 +70,20 @@ body {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2a2a37 transparent;
+  scrollbar-color: rgb(var(--bg-4)) transparent;
 }
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #2a2a37;
+  background: rgb(var(--bg-4));
   border-radius: 10px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background-color: #3a3a4a;
+  background-color: rgb(var(--fg-3));
 }
 
 .tnum {
@@ -47,18 +95,18 @@ input[type="range"].range {
   appearance: none;
   height: 4px;
   border-radius: 999px;
-  background: linear-gradient(to right, #ececf1 var(--p, 0%), #2a2a37 var(--p, 0%));
+  background: linear-gradient(to right, rgb(var(--range-fill)) var(--p, 0%), rgb(var(--bg-4)) var(--p, 0%));
   cursor: pointer;
 }
 input[type="range"].range:hover {
-  background: linear-gradient(to right, var(--accent) var(--p, 0%), #2a2a37 var(--p, 0%));
+  background: linear-gradient(to right, rgb(var(--accent)) var(--p, 0%), rgb(var(--bg-4)) var(--p, 0%));
 }
 input[type="range"].range::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  background: #fff;
+  background: rgb(var(--fg));
   opacity: 0;
   transition: opacity 0.15s;
 }
@@ -74,9 +122,9 @@ input[type="range"].range::-moz-range-thumb {
 }
 
 .drop-target {
-  outline: 2px solid var(--accent);
+  outline: 2px solid rgb(var(--accent));
   outline-offset: -2px;
-  background: rgba(124, 92, 255, 0.12);
+  background: rgb(var(--accent) / 0.12);
 }
 
 @keyframes eq {
@@ -88,7 +136,7 @@ input[type="range"].range::-moz-range-thumb {
   width: 3px;
   margin-right: 2px;
   height: 12px;
-  background: var(--accent);
+  background: rgb(var(--accent));
   transform-origin: bottom;
   animation: eq 0.9s ease-in-out infinite;
   border-radius: 1px;

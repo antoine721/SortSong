@@ -1,6 +1,6 @@
 "use client";
 import {
-  ChevronRight, Disc3, Link2, Star, Folder, FolderOpen, FolderPlus, Inbox, Library, ListMusic, MoreHorizontal, Pencil, Plus, Search, Settings, Sparkles, Trash2, Wand2, X,
+  ChevronRight, Disc3, LayoutGrid, Link2, Star, Folder, FolderOpen, FolderPlus, Inbox, Library, ListMusic, MoreHorizontal, Pencil, Plus, Search, Settings, Sparkles, Trash2, Wand2, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -60,11 +60,21 @@ export function Sidebar() {
           mobileNav ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex items-center gap-2.5 px-5 pb-3 pt-5">
+        <div className="discreet-hide flex items-center gap-2.5 px-5 pb-3 pt-5">
           <div className="grid h-8 w-8 place-items-center rounded-xl bg-accent text-white shadow-[0_0_20px_rgba(124,92,255,0.5)]">
             <Disc3 className="h-[18px] w-[18px]" />
           </div>
           <span className="text-[17px] font-bold tracking-tight">SortSong</span>
+        </div>
+        {/* Mode discret : logo neutre, le nom n'est lisible que de près */}
+        <div className="discreet-only flex flex-col items-center px-5 pb-4 pt-5">
+          <div className="flex items-center gap-1.5 text-accent">
+            <LayoutGrid className="h-5 w-5" />
+            <span className="text-[17px] font-semibold italic tracking-tight">Portail</span>
+          </div>
+          <span className="mt-0.5 text-[8px] uppercase tracking-[0.2em] text-fg-3">sortsong · services</span>
+        </div>
+        <div className="absolute right-4 top-5 md:hidden">
           <button className="ml-auto text-fg-3 md:hidden" onClick={() => useApp.setState({ mobileNav: false })}>
             <X className="h-5 w-5" />
           </button>
@@ -93,10 +103,10 @@ export function Sidebar() {
                 onClick={() => useApp.setState({ mobileNav: false })}
                 className={cx(
                   "flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition",
-                  active ? "bg-bg-3 text-fg" : "text-fg-2 hover:bg-bg-2 hover:text-fg",
+                  active ? "bg-accent-soft text-accent" : "text-fg-2 hover:bg-bg-2 hover:text-fg",
                 )}
               >
-                <n.icon className={cx("h-[18px] w-[18px]", active && "text-accent-2")} />
+                <n.icon className={cx("h-[18px] w-[18px]", active && "text-accent")} />
                 <span className="flex-1">{n.label}</span>
                 {n.count !== undefined && n.count > 0 && (
                   <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-white tnum">{n.count.toLocaleString("fr-FR")}</span>

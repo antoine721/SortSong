@@ -25,6 +25,11 @@ export function Shortcuts() {
         return;
       }
       if (mod || e.altKey) return;
+      if (e.shiftKey && (e.key === "D" || e.key === "d")) {
+        const app = useApp.getState();
+        app.setTheme(app.theme === "discreet" ? "dark" : "discreet");
+        return;
+      }
       const p = usePlayer.getState();
       switch (e.key) {
         case " ":

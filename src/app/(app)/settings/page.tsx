@@ -25,6 +25,8 @@ export default function SettingsPage() {
   const [lfBusy, setLfBusy] = useState<string | null>(null);
   const lfConfigured = useApp((s) => s.config.lastfm);
   const params = useSearchParams();
+  const theme = useApp((s) => s.theme);
+  const setTheme = useApp((s) => s.setTheme);
 
   useEffect(() => {
     const st = params.get("lastfm");
@@ -163,6 +165,20 @@ export default function SettingsPage() {
       </section>
 
       <section className={box}>
+        <h2 className={h2}>Apparence</h2>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          {(["discreet", "dark"] as const).map((t) => (
+            <Button key={t} size="sm" variant={theme === t ? "primary" : "secondary"} onClick={() => setTheme(t)}>
+              {t === "discreet" ? "Mode discret (portail clair, compact)" : "Thème sombre SortSong"}
+            </Button>
+          ))}
+          <span className="text-fg-3">
+            Raccourci <Kbd>Maj</Kbd> + <Kbd>D</Kbd> pour basculer instantanément.
+          </span>
+        </div>
+      </section>
+
+      <section className={box}>
         <h2 className={h2}><MonitorSpeaker className="h-5 w-5 text-accent-2" /> Lecture (test V0)</h2>
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2">
@@ -230,6 +246,7 @@ export default function SettingsPage() {
           <span><Kbd>M</Kbd> sauter au milieu (drop)</span>
           <span><Kbd>Ctrl K</Kbd> recherche</span>
           <span><Kbd>Ctrl Z</Kbd> annuler le dernier rangement</span>
+          <span><Kbd>Maj D</Kbd> mode discret / thème sombre</span>
         </div>
       </section>
 

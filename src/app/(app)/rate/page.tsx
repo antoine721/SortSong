@@ -32,6 +32,7 @@ export default function RatePage() {
   const [fallback, setFallback] = useState<string | null>(null); // id joué via Spotify faute d'extrait
   const pv = usePreview();
   const volume = usePlayer((s) => s.volume);
+  const D = useApp((s) => s.theme === "discreet"); // mode discret : carrousel sobre et compact
   const [flash, setFlash] = useState<{ id: string; n: number } | null>(null);
   const lastPlayed = useRef<string | null>(null);
 
@@ -92,9 +93,9 @@ export default function RatePage() {
       // Coupe Spotify s'il jouait, pour ne pas superposer deux sons.
       const p = usePlayer.getState();
       if (p.current && !p.paused) p.toggle();
-      await resolvePreviews([t.id]);
+      await resolvePreviews([t.id]).catch(() => {});
       if (lastPlayed.current !== t.id) return; // l'utilisateur est déjà passé au suivant
-      if (await playPreview(t.id)) setFallback(null);
+      if (await playPreview(t.id).catch(() => false)) setFallback(null);
       else {
         stopPreviews();
         setFallback(t.id);
@@ -188,17 +189,17 @@ export default function RatePage() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#5b21b6] via-[#a21caf] to-[#e11d48] px-4 pb-10 pt-8 md:px-8">
-        <div className="pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-black/20 blur-3xl" />
+      <section className={D ? "relative overflow-hidden px-4 pb-6 pt-6 md:px-8" : "relative overflow-hidden bg-gradient-to-br from-[#5b21b6] via-[#a21caf] to-[#e11d48] px-4 pb-10 pt-8 md:px-8"}>
+        <div className="discreet-hide pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
+        <div className="discreet-hide pointer-events-none absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-black/20 blur-3xl" />
         <div className="relative flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-extrabold tracking-tight text-white md:text-4xl">Noter</h1>
-          <span className="rounded-full bg-white/15 px-3 py-1 text-sm font-medium text-white/90 backdrop-blur">
+          <h1 className={D ? "text-[22px] font-semibold tracking-tight text-fg" : "text-3xl font-extrabold tracking-tight text-white md:text-4xl"}>{D ? "Évaluation" : "Noter"}</h1>
+          <span className={D ? "rounded-full bg-bg-3 px-2.5 py-0.5 text-[12px] text-fg-2" : "rounded-full bg-white/15 px-3 py-1 text-sm font-medium text-white/90 backdrop-blur"}>
             {Math.max(0, list.length - done)} à noter · {done} noté{done > 1 ? "s" : ""} cette session
           </span>
-          <div className="ml-auto flex flex-wrap items-center gap-4 text-white/90 [&_span]:!text-white/90">
+          <div className={D ? "ml-auto flex flex-wrap items-center gap-4" : "ml-auto flex flex-wrap items-center gap-4 text-white/90 [&_span]:!text-white/90"}>
             <Toggle checked={autoplay} onChange={(v) => (setAutoplay(v), persist("ss_rate_autoplay", v))} label="Lecture auto" />
-            <div className="flex rounded-full bg-black/20 p-1 text-sm backdrop-blur">
+            <div className={D ? "flex rounded-lg border border-line bg-bg-1 p-0.5 text-[12px]" : "flex rounded-full bg-black/20 p-1 text-sm backdrop-blur"}>
               {(["preview", "full"] as const).map((v) => (
                 <button
                   key={v}
@@ -214,7 +215,10 @@ export default function RatePage() {
                       if (p.current && !p.paused) p.toggle();
                     }
                   }}
-                  className={cx("h-7 rounded-full px-3 font-medium transition", source === v ? "bg-white text-[#581c87]" : "text-white/85 hover:text-white")}
+                  className={cx(
+                    "h-7 rounded-full px-3 font-medium transition",
+                    D ? (source === v ? "rounded-md bg-accent-soft text-accent" : "rounded-md text-fg-2 hover:text-fg") : source === v ? "bg-white text-[#581c87]" : "text-white/85 hover:text-white",
+                  )}
                   title={v === "preview" ? "Extraits de 30 s préchargés, joués dans la page (instantané, sans l'appli Spotify)" : "Morceau complet via Spotify"}
                 >
                   {v === "preview" ? "Extraits 30 s" : "Morceau complet"}
@@ -228,7 +232,7 @@ export default function RatePage() {
         </div>
 
         {!track ? (
-          <div className="relative mx-auto mt-12 max-w-md rounded-3xl bg-white/90 p-8 text-center text-[#2e1065] shadow-2xl">
+          <div className={D ? "relative mx-auto mt-8 max-w-sm rounded-xl border border-line bg-bg-1 p-6 text-center text-fg shadow-soft" : "relative mx-auto mt-12 max-w-md rounded-3xl bg-white/90 p-8 text-center text-[#2e1065] shadow-2xl"}>
             <Star className="mx-auto h-12 w-12 fill-amber-400 text-amber-400" />
             <h2 className="mt-3 text-xl font-bold">{list.length ? "Tout est noté 🎉" : "Rien à noter"}</h2>
             <p className="mt-1 text-sm text-[#4c1d95]/80">Importe une playlist, un album ou un titre Spotify avec son lien.</p>
@@ -244,7 +248,7 @@ export default function RatePage() {
         ) : (
           <>
             {/* Carrousel */}
-            <div className="relative mx-auto mt-8 h-[min(56vw,400px)] max-w-6xl">
+            <div className={D ? "relative mx-auto mt-5 h-[min(40vw,250px)] max-w-5xl" : "relative mx-auto mt-8 h-[min(56vw,400px)] max-w-6xl"}>
               {window5.map(({ t, d, i }) => {
                 const g = given[t.id];
                 const deleted = g === 0;
@@ -255,8 +259,10 @@ export default function RatePage() {
                     key={t.id}
                     onClick={() => !center && setIdx(i)}
                     className={cx(
-                      "absolute left-1/2 top-1/2 w-[min(46vw,330px)] rounded-[22px] p-3 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] transition-all duration-300 ease-out",
-                      center ? "z-20 bg-white" : "z-10 cursor-pointer bg-white/85 hover:bg-white",
+                      "absolute left-1/2 top-1/2 transition-all duration-300 ease-out",
+                      D
+                        ? cx("w-[min(28vw,190px)] rounded-xl border border-line bg-bg-1 p-2.5 shadow-soft", center ? "reveal-off z-20" : "z-10 cursor-pointer")
+                        : cx("w-[min(46vw,330px)] rounded-[22px] p-3 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)]", center ? "z-20 bg-white" : "z-10 cursor-pointer bg-white/85 hover:bg-white"),
                     )}
                     style={{
                       transform: `translate(calc(-50% + ${d * 78}%), -50%) scale(${center ? 1 : ad === 1 ? 0.74 : 0.6})`,
@@ -264,7 +270,7 @@ export default function RatePage() {
                       zIndex: 20 - ad,
                     }}
                   >
-                    <div className="relative aspect-square overflow-hidden rounded-2xl bg-[#f0d6ff]">
+                    <div className={D ? "relative aspect-[4/3] overflow-hidden rounded-lg bg-accent-soft" : "relative aspect-square overflow-hidden rounded-2xl bg-[#f0d6ff]"}>
                       {t.cover ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -275,7 +281,7 @@ export default function RatePage() {
                           onError={(e) => (e.currentTarget.style.visibility = "hidden")}
                         />
                       ) : (
-                        <div className="grid h-full w-full place-items-center text-[#c084fc]"><Music2 className="h-1/3 w-1/3" /></div>
+                        <div className={D ? "grid h-full w-full place-items-center text-accent" : "grid h-full w-full place-items-center text-[#c084fc]"}><Music2 className="h-1/3 w-1/3" /></div>
                       )}
                       {center && (
                         <button
@@ -288,7 +294,7 @@ export default function RatePage() {
                           className="absolute inset-0 grid place-items-center bg-black/0 opacity-0 transition hover:bg-black/30 hover:opacity-100"
                           title="Lecture / pause (Espace)"
                         >
-                          {isPlaying ? <Pause className="h-16 w-16 fill-white text-white" /> : <Play className="h-16 w-16 fill-white text-white" />}
+                          {isPlaying ? <Pause className="h-1/4 w-1/4 fill-white text-white" /> : <Play className="h-1/4 w-1/4 fill-white text-white" />}
                         </button>
                       )}
                       {center && previewing && pv.blocked && (
@@ -310,21 +316,21 @@ export default function RatePage() {
                     </div>
                     {center && previewing && (
                       <div
-                        className="mt-2 h-1.5 cursor-pointer overflow-hidden rounded-full bg-[#e9d5ff]"
+                        className={D ? "mt-2 h-1 cursor-pointer overflow-hidden rounded-full bg-bg-4" : "mt-2 h-1.5 cursor-pointer overflow-hidden rounded-full bg-[#e9d5ff]"}
                         onClick={(e) => {
                           const r = e.currentTarget.getBoundingClientRect();
                           seekPreview(((e.clientX - r.left) / r.width) * (pv.duration || 30));
                         }}
                         title="Extrait de 30 s"
                       >
-                        <div className="h-full rounded-full bg-gradient-to-r from-[#7c3aed] to-[#db2777]" style={{ width: `${Math.min(100, (pv.time / (pv.duration || 30)) * 100)}%` }} />
+                        <div className={D ? "h-full rounded-full bg-accent" : "h-full rounded-full bg-gradient-to-r from-[#7c3aed] to-[#db2777]"} style={{ width: `${Math.min(100, (pv.time / (pv.duration || 30)) * 100)}%` }} />
                       </div>
                     )}
-                    <div className="px-1.5 pb-1 pt-3 text-[#2e1065]">
-                      <div className={cx("truncate font-bold", center ? "text-lg" : "text-base")}>{t.title}</div>
-                      <div className="truncate text-sm text-[#6b21a8]/80">{t.artists.map((a) => a.name).join(", ")}</div>
+                    <div className={D ? "px-1 pb-0.5 pt-2 text-center text-fg" : "px-1.5 pb-1 pt-3 text-[#2e1065]"}>
+                      <div className={cx("truncate font-bold", D ? "text-[12px] font-semibold" : center ? "text-lg" : "text-base")}>{t.title}</div>
+                      <div className={D ? "truncate text-[11px] text-fg-3" : "truncate text-sm text-[#6b21a8]/80"}>{t.artists.map((a) => a.name).join(", ")}</div>
                       {!center && (
-                        <div className="mt-1.5 h-4">{g ? <Stars value={g} size={13} empty="#e9d5ff" /> : !deleted && <div className="h-2 w-16 rounded-full bg-[#e9d5ff]" />}</div>
+                        <div className="mt-1.5 h-4">{g ? <Stars value={g} size={D ? 10 : 13} empty={D ? "#e5e7eb" : "#e9d5ff"} color={D ? "#1a91da" : undefined} /> : !deleted && <div className={D ? "mx-auto h-1.5 w-12 rounded-full bg-bg-3" : "h-2 w-16 rounded-full bg-[#e9d5ff]"} />}</div>
                       )}
                     </div>
                   </div>
@@ -333,15 +339,15 @@ export default function RatePage() {
             </div>
 
             {/* Notation */}
-            <div className="relative mx-auto mt-6 flex max-w-2xl flex-col items-center gap-4 text-white">
-              <div className="flex items-center gap-2 text-sm text-white/80">
+            <div className={D ? "relative mx-auto mt-4 flex max-w-2xl flex-col items-center gap-3 text-fg" : "relative mx-auto mt-6 flex max-w-2xl flex-col items-center gap-4 text-white"}>
+              <div className={D ? "flex items-center gap-2 text-[12px] text-fg-3" : "flex items-center gap-2 text-sm text-white/80"}>
                 <span>{track.album}</span>·<span>{fmtDuration(track.durationMs)}</span>
                 {track.bpm ? <>·<span>{Math.round(track.bpm)} BPM</span></> : null}
                 {track.sourceRef && <>·<span className="truncate">de « {track.sourceRef} »</span></>}
                 {source === "preview" && (
                   <>
                     ·
-                    <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs">
+                    <span className={D ? "rounded-full bg-bg-3 px-2 py-0.5 text-[11px]" : "rounded-full bg-white/15 px-2 py-0.5 text-xs"}>
                       {fallback === track.id ? "pas d'extrait → Spotify" : hasPreview(track.id) === false ? "pas d'extrait" : "extrait 30 s"}
                     </span>
                   </>
@@ -352,17 +358,17 @@ export default function RatePage() {
                   onClick={() => setIdx((i) => Math.max(0, i - 1))}
                   disabled={idx === 0}
                   title="Revenir en arrière (←)"
-                  className="grid h-11 w-11 place-items-center rounded-full bg-white/15 backdrop-blur transition hover:bg-white/25 disabled:opacity-30"
+                  className={D ? "grid h-8 w-8 place-items-center rounded-lg border border-line bg-bg-1 text-fg-2 transition hover:text-fg disabled:opacity-30" : "grid h-11 w-11 place-items-center rounded-full bg-white/15 backdrop-blur transition hover:bg-white/25 disabled:opacity-30"}
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </button>
                 <button
                   onClick={() => give(0)}
                   title="0 — Ne m'intéresse pas : supprimer"
-                  className="flex h-14 items-center gap-2 rounded-2xl bg-black/25 px-4 font-semibold backdrop-blur transition hover:bg-red-600"
+                  className={D ? "flex h-9 items-center gap-1.5 rounded-lg border border-line bg-bg-1 px-2.5 text-fg-2 transition hover:border-red-300 hover:text-red-500" : "flex h-14 items-center gap-2 rounded-2xl bg-black/25 px-4 font-semibold backdrop-blur transition hover:bg-red-600"}
                 >
-                  <span className="rounded bg-white/20 px-1.5 font-mono text-xs">0</span>
-                  <Trash2 className="h-5 w-5" />
+                  <span className={D ? "rounded bg-bg-3 px-1 font-mono text-[10px]" : "rounded bg-white/20 px-1.5 font-mono text-xs"}>0</span>
+                  <Trash2 className={D ? "h-4 w-4" : "h-5 w-5"} />
                 </button>
                 {[1, 2, 3, 4, 5].map((n) => (
                   <button
@@ -370,23 +376,24 @@ export default function RatePage() {
                     onClick={() => give(n)}
                     title={`${n} — ${LABELS[n]}`}
                     className={cx(
-                      "flex h-14 w-14 flex-col items-center justify-center rounded-2xl backdrop-blur transition hover:scale-105 md:w-16",
-                      currentRating && n <= currentRating ? "bg-amber-400 text-[#3b0764]" : "bg-white/15 hover:bg-white/30",
+                      D
+                        ? cx("flex h-9 w-10 flex-col items-center justify-center rounded-lg border transition", currentRating && n <= currentRating ? "border-transparent bg-accent text-white" : "border-line bg-bg-1 text-fg-2 hover:border-accent hover:text-accent")
+                        : cx("flex h-14 w-14 flex-col items-center justify-center rounded-2xl backdrop-blur transition hover:scale-105 md:w-16", currentRating && n <= currentRating ? "bg-amber-400 text-[#3b0764]" : "bg-white/15 hover:bg-white/30"),
                     )}
                   >
-                    <Star className={cx("h-5 w-5", currentRating && n <= currentRating ? "fill-[#3b0764]" : "fill-white/0")} />
-                    <span className="font-mono text-xs font-bold">{n}</span>
+                    <Star className={cx(D ? "h-3.5 w-3.5" : "h-5 w-5", currentRating && n <= currentRating ? (D ? "fill-white" : "fill-[#3b0764]") : "fill-white/0")} />
+                    <span className={D ? "font-mono text-[10px] font-semibold" : "font-mono text-xs font-bold"}>{n}</span>
                   </button>
                 ))}
                 <button
                   onClick={() => setIdx((i) => Math.min(i + 1, list.length))}
                   title="Passer sans noter (→)"
-                  className="grid h-11 w-11 place-items-center rounded-full bg-white/15 backdrop-blur transition hover:bg-white/25"
+                  className={D ? "grid h-8 w-8 place-items-center rounded-lg border border-line bg-bg-1 text-fg-2 transition hover:text-fg" : "grid h-11 w-11 place-items-center rounded-full bg-white/15 backdrop-blur transition hover:bg-white/25"}
                 >
                   <ArrowRight className="h-5 w-5" />
                 </button>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/75 [&_kbd]:border-white/20 [&_kbd]:bg-white/10 [&_kbd]:text-white">
+              <div className={D ? "flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-fg-3" : "flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/75 [&_kbd]:border-white/20 [&_kbd]:bg-white/10 [&_kbd]:text-white"}>
                 <span><Kbd>1</Kbd>…<Kbd>5</Kbd> noter et passer</span>
                 <span><Kbd>0</Kbd> supprimer</span>
                 <span><Kbd>←</Kbd> revenir</span>

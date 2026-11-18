@@ -64,13 +64,19 @@ export function TrackList({
     return () => ro.disconnect();
   }, []);
 
+  const rowH = useApp((s) => (s.theme === "discreet" ? 44 : 60));
   const virt = useVirtualizer({
     count: tracks.length,
     getScrollElement: () => scrollEl,
-    estimateSize: () => 60,
+    estimateSize: () => rowH,
     overscan: 12,
     scrollMargin: margin,
   });
+
+  useEffect(() => {
+    virt.measure();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rowH]);
 
   const play = (i: number) => usePlayer.getState().playList(tracks, i, label);
   const opt = { showCover: true, ...opts };
@@ -145,7 +151,7 @@ function Header({ sort, onSort, showAlbum, showAdded, showNote, showIndex, reord
   return (
     <div className="sticky top-0 z-10 mb-1 flex h-9 items-center gap-3 border-b border-line bg-bg-1/95 px-3 text-[11px] font-semibold uppercase tracking-wider text-fg-3 backdrop-blur">
       {(showIndex || reorderable) && <span className="w-7 text-center">#</span>}
-      <span className="w-12" />
+      <span className="w-12 [.discreet_&]:w-8" />
       <H k="title" className="min-w-0 flex-[3]">Titre</H>
       {showAlbum && <H k="album" className="hidden min-w-0 flex-[2] lg:flex">Album</H>}
       {showNote && <span className="hidden min-w-0 flex-[2] xl:block">Note</span>}
@@ -186,6 +192,7 @@ const TrackRow = memo(function TrackRow({
   onNote?: (t: TrackDTO, note: string) => void;
 }) {
   const isCurrent = usePlayer((s) => s.current?.id === track.id);
+  const coverPx = useApp((s) => (s.theme === "discreet" ? 32 : 48));
   const paused = usePlayer((s) => s.paused);
   const meta = useTrackMeta(track);
   const rating = useApp((s) => s.libTracks?.find((t) => t.id === track.id)?.rating ?? track.rating ?? null);
@@ -208,7 +215,7 @@ const TrackRow = memo(function TrackRow({
         setMenu({ x: e.clientX + 250, y: e.clientY });
       }}
       className={cx(
-        "group flex h-[60px] items-center gap-3 rounded-lg px-3 transition-colors hover:bg-white/[0.04]",
+        "group flex h-full items-center gap-3 rounded-lg px-3 transition-colors hover:bg-bg-2 [.discreet_&]:rounded-md [.discreet_&]:hover:bg-accent-soft",
         isCurrent && "bg-accent-soft hover:bg-accent-soft",
       )}
     >
@@ -226,7 +233,7 @@ const TrackRow = memo(function TrackRow({
       )}
       {showCover && (
         <button onClick={() => (isCurrent ? usePlayer.getState().toggle() : onPlay(index))} className="relative shrink-0" title="Lire">
-          <Cover src={track.coverSmall || track.cover} size={48} />
+          <Cover src={track.coverSmall || track.cover} size={coverPx} />
           <span className={cx("absolute inset-0 grid place-items-center rounded-md bg-black/50 transition", isCurrent ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
             {isCurrent && !paused ? (
               <>
@@ -287,7 +294,7 @@ const TrackRow = memo(function TrackRow({
         </div>
       )}
       <div className="hidden w-[76px] xl:block" title={meta.energy ? `Énergie ${meta.energy}/5` : undefined}>
-        {rating ? <Stars value={rating} size={12} /> : <span className="text-[11px] text-fg-3">non noté</span>}
+        {rating ? <Stars value={rating} size={12} /> : <span className="text-[11px] text-fg-3" title="Pas encore noté">—</span>}
         {meta.energy ? <div className="mt-0.5"><Stars value={meta.energy} size={9} color="#f97316" /></div> : null}
       </div>
       <div className="hidden w-36 sm:block">

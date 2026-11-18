@@ -33,6 +33,12 @@ Sécurité : l'écran de configuration n'est modifiable que tant que Spotify n'e
 Note Vercel : l'import d'une très grosse bibliothèque peut dépasser la durée maximale d'une fonction sur l'offre gratuite ;
 relance « Resynchroniser », l'import reprend là où il s'est arrêté.
 
+## Mode discret (par défaut)
+
+L'interface ressemble à un portail d'entreprise clair et compact : petits éléments, couleurs neutres, pochettes en
+niveaux de gris (couleur au survol), onglet « Mes applications ». On ne voit que c'est SortSong qu'en s'approchant.
+**Maj+D** bascule instantanément vers le thème sombre d'origine (et inversement) ; réglage aussi dans Réglages → Apparence.
+
 ## Importer et noter
 
 - **Import par lien Spotify ou Deezer** : bouton « Importer un lien » (barre latérale). Colle un ou plusieurs liens de

@@ -65,6 +65,8 @@ type State = {
   importLinks: (urls: string, opts?: { createPlaylist?: boolean; folderId?: string | null }) => Promise<ImportResult[]>;
   rate: (track: TrackDTO, rating: number | null, opts?: { record?: boolean }) => Promise<void>;
   linkDialog: { folderId: string | null } | null;
+  theme: "discreet" | "dark";
+  setTheme: (t: "discreet" | "dark") => void;
 };
 
 const bump = (v: Record<string, number>, ids: string[]) => {
@@ -98,6 +100,15 @@ export const useApp = create<State>((set, get) => ({
   toasts: [],
   undoStack: [],
   linkDialog: null,
+  theme: typeof document !== "undefined" && !document.documentElement.classList.contains("discreet") ? "dark" : "discreet",
+  setTheme: (t) => {
+    document.documentElement.classList.toggle("discreet", t === "discreet");
+    document.title = t === "discreet" ? "Mes applications" : "SortSong";
+    try {
+      localStorage.setItem("ss_theme", t);
+    } catch {}
+    set({ theme: t });
+  },
 
   set: (p) => set(p),
 

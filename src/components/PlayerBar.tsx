@@ -36,13 +36,13 @@ export function PlayerBar() {
   const membership = useApp((s) => (t ? s.membership[t.id] : undefined));
 
   return (
-    <footer className="relative z-20 flex h-[88px] shrink-0 items-center gap-3 border-t border-line bg-bg-1 px-3 md:gap-4 md:px-4">
+    <footer className="relative z-20 flex h-[88px] shrink-0 items-center gap-3 border-t border-line bg-bg-1 px-3 md:gap-4 md:px-4 [.discreet_&]:h-[60px]">
       {/* Morceau en cours */}
       <div className="flex min-w-0 flex-1 items-center gap-3 md:w-[30%] md:flex-none">
         {t ? (
           <>
             <button onClick={() => useApp.getState().openTrack(t)} title="Fiche du morceau">
-              <Cover src={t.cover} size={56} className="shadow-soft" />
+              <Cover src={t.cover} size={56} className="shadow-soft [.discreet_&]:!h-9 [.discreet_&]:!w-9" />
             </button>
             <div className="min-w-0">
               <div className="truncate font-semibold">{t.title}</div>

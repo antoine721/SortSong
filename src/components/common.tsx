@@ -28,6 +28,26 @@ export function PageHeader({
   description?: React.ReactNode;
   children?: React.ReactNode;
 }) {
+  const discreet = useApp((s) => s.theme === "discreet");
+  if (discreet) {
+    // Mode discret : en-tête sobre façon portail (titre simple, petite vignette, pas de couleur vive).
+    return (
+      <header className="px-4 pb-4 pt-6 md:px-8">
+        <div className="flex items-center gap-4">
+          {cover !== undefined && (typeof cover === "string" || cover === null) && (
+            <Cover src={cover} size={56} rounded={roundedCover ? "rounded-full" : "rounded-lg"} className="border border-line" />
+          )}
+          <div className="min-w-0 flex-1">
+            {kicker && <div className="text-[11px] font-medium uppercase tracking-wider text-fg-3">{kicker}</div>}
+            <h1 className="break-words text-[22px] font-semibold tracking-tight text-fg">{title}</h1>
+            {description && <div className="mt-0.5 max-w-2xl text-[13px] text-fg-2">{description}</div>}
+            {meta && <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-fg-3">{meta}</div>}
+          </div>
+        </div>
+        {children && <div className="mt-4 flex flex-wrap items-center gap-2">{children}</div>}
+      </header>
+    );
+  }
   return (
     <header className="relative overflow-hidden px-4 pb-6 pt-8 md:px-8 md:pt-12" style={{ background: `linear-gradient(180deg, ${color}55 0%, ${color}14 60%, transparent 100%)` }}>
       <div className="flex flex-col gap-6 sm:flex-row sm:items-end">
@@ -55,10 +75,10 @@ export function PlayButtons({ tracks, label }: { tracks: TrackDTO[]; label: stri
       <button
         disabled={!tracks.length}
         onClick={() => usePlayer.getState().playList(tracks, 0, label)}
-        className="grid h-14 w-14 place-items-center rounded-full bg-accent text-white shadow-[0_8px_30px_-6px_rgba(124,92,255,0.8)] transition hover:scale-105 hover:bg-accent-2 disabled:opacity-40"
+        className="grid h-[3.25rem] w-[3.25rem] place-items-center rounded-full bg-accent text-white shadow-soft transition hover:scale-105 hover:bg-accent-2 disabled:opacity-40 [.discreet_&]:h-8 [.discreet_&]:w-8"
         title="Lire"
       >
-        <Play className="ml-1 h-6 w-6 fill-current" />
+        <Play className="ml-0.5 h-[45%] w-[45%] fill-current" />
       </button>
       <Button
         variant="ghost"
