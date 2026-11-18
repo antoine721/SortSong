@@ -35,8 +35,10 @@ relance « Resynchroniser », l'import reprend là où il s'est arrêté.
 
 ## Importer et noter
 
-- **Import uniquement par lien Spotify** : bouton « Importer un lien Spotify » (barre latérale). Colle un ou plusieurs liens de
-  playlist, d'album ou de titre (un par ligne). Les morceaux arrivent **non notés** ; tes likes et tes playlists Spotify ne sont
+- **Import par lien Spotify ou Deezer** : bouton « Importer un lien » (barre latérale). Colle un ou plusieurs liens de
+  playlist, d'album ou de titre (un par ligne), y compris les liens courts de partage Deezer. Les titres Deezer sont retrouvés
+  sur Spotify par ISRC, sinon par titre + artiste + durée ; les titres douteux sont ignorés et comptés « introuvables »
+  (la playlist Deezer doit être publique). Les morceaux arrivent **non notés** ; tes likes et tes playlists Spotify ne sont
   jamais importés automatiquement. Option : créer aussi une playlist interne avec ces titres.
 - **Noter** : un morceau à la fois en carrousel. Par défaut, **extraits de 30 s** (catalogue public Deezer) joués directement dans la page, sans l'appli Spotify, avec les 3 morceaux suivants préchargés : le passage au suivant est instantané. Sans extrait disponible, repli automatique sur Spotify. Mode « Morceau complet » : lecture Spotify à partir de 0:30 (ou du milieu avec « Démarrer au drop »).
 

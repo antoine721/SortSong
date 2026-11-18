@@ -82,7 +82,7 @@ export function Sidebar() {
             onClick={() => useApp.setState({ linkDialog: { folderId: null }, mobileNav: false })}
             className="mb-2 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-accent text-sm font-semibold text-white shadow-[0_6px_24px_-8px_rgba(124,92,255,0.8)] transition hover:bg-accent-2"
           >
-            <Link2 className="h-4 w-4" /> Importer un lien Spotify
+            <Link2 className="h-4 w-4" /> Importer un lien
           </button>
           {nav.map((n) => {
             const active = pathname.startsWith(n.href);

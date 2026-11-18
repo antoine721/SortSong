@@ -130,7 +130,7 @@ export function ArtistGrid({ artists }: { artists: ArtistDTO[] }) {
 export function ImportLinkButton({ variant = "primary" }: { variant?: "primary" | "secondary" }) {
   return (
     <Button variant={variant} onClick={() => useApp.setState({ linkDialog: { folderId: null } })}>
-      <Link2 className="h-4 w-4" /> Importer un lien Spotify
+      <Link2 className="h-4 w-4" /> Importer un lien Spotify / Deezer
     </Button>
   );
 }

@@ -8,7 +8,7 @@ type Toast = { id: string; text: string; tone?: "ok" | "err" | "info"; undo?: bo
 type UndoEntry = { id: string; label: string; run: () => Promise<void> };
 export type LibTrack = TrackDTO & { source?: string; sourceRef?: string | null };
 
-export type ImportResult = { url: string; error?: string; name?: string; type?: string; total?: number; added?: number; already?: number; skippedDeleted?: number; playlistId?: string | null };
+export type ImportResult = { url: string; error?: string; name?: string; type?: string; total?: number; added?: number; already?: number; skippedDeleted?: number; notFound?: number; source?: string; playlistId?: string | null };
 
 type AddMenu = { track: TrackDTO; x: number; y: number } | null;
 

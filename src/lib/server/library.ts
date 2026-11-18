@@ -2,6 +2,8 @@ import { prisma } from "./db";
 import { normTrack, paginate, playlistItemTrack, sp, spSafe } from "./spotify";
 import { refreshStatus, upsertTracks } from "./tracks";
 import type { TrackDTO } from "../types";
+import { dz, dzTrack, type DzTrack } from "./deezer";
+import { matchOnSpotify, pool } from "./match";
 
 type Progress = (msg: { step: string; done?: number; total?: number; detail?: string }) => void;
 
@@ -158,15 +160,51 @@ export function parsePlaylistLink(input: string): string | null {
   return m ? m[1] : null;
 }
 
-export type SpotifyLink = { type: "playlist" | "album" | "track"; id: string };
+export type SpotifyLink = { type: "playlist" | "album" | "track"; id: string; source?: "spotify" | "deezer" };
 
-/** Lien Spotify (open.spotify.com/…, spotify:type:id) → type + ID. */
+/** Lien Spotify (open.spotify.com/…, spotify:type:id) ou Deezer (deezer.com/…/playlist/123) → source + type + ID. */
 export function parseSpotifyLink(input: string): SpotifyLink | null {
   const s = input.trim();
+  const d = /deezer\.com\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?(playlist|album|track)\/(\d+)/i.exec(s);
+  if (d) return { source: "deezer", type: d[1].toLowerCase() as SpotifyLink["type"], id: d[2] };
   const m =
     /open\.spotify\.com\/(?:[a-z-]+\/)*(playlist|album|track)\/([A-Za-z0-9]{22})/.exec(s) ||
     /spotify:(playlist|album|track):([A-Za-z0-9]{22})/.exec(s);
-  return m ? { type: m[1] as SpotifyLink["type"], id: m[2] } : null;
+  return m ? { source: "spotify", type: m[1] as SpotifyLink["type"], id: m[2] } : null;
+}
+
+/** Liens courts de partage Deezer (link.deezer.com, deezer.page.link) → lien complet. */
+export async function resolveShortLink(input: string): Promise<string> {
+  const s = input.trim();
+  if (!/^https?:\/\/(link\.deezer\.com|deezer\.page\.link)\//i.test(s)) return s;
+  try {
+    const res = await fetch(s, { redirect: "follow", signal: AbortSignal.timeout(8000) });
+    if (/deezer\.com\/.*(playlist|album|track)\/\d+/.test(res.url)) return res.url;
+    const html = await res.text();
+    const m = /https?:\/\/www\.deezer\.com\/[^"'\s]*(?:playlist|album|track)\/\d+/.exec(html);
+    return m ? m[0] : s;
+  } catch {
+    return s;
+  }
+}
+
+/** Morceaux d'un lien Deezer (API publique, sans clé). */
+async function deezerItems(link: SpotifyLink): Promise<{ name: string; items: DzTrack[] }> {
+  if (link.type === "track") {
+    const t = await dzTrack(link.id);
+    if (!t?.id) throw new Error("Titre Deezer introuvable");
+    return { name: `${t.title} — ${t.artist.name}`, items: [t] };
+  }
+  const meta = await dz<any>(`/${link.type}/${link.id}`);
+  if (!meta?.id) throw new Error(link.type === "playlist" ? "Playlist Deezer introuvable ou privée (elle doit être publique)" : "Album Deezer introuvable");
+  const items: DzTrack[] = [];
+  let next: string | null = `/${link.type}/${link.id}/tracks?limit=100`;
+  while (next && items.length < 2000) {
+    const page: any = await dz(next);
+    items.push(...(page?.data || []));
+    next = page?.next ? String(page.next).replace(/^https?:\/\/api\.deezer\.com/, "") : null;
+  }
+  return { name: meta.title || "Deezer", items };
 }
 
 /**
@@ -176,7 +214,21 @@ export function parseSpotifyLink(input: string): SpotifyLink | null {
 export async function importFromLink(userId: string, link: SpotifyLink, opts: { createPlaylist?: boolean; folderId?: string | null } = {}) {
   let name = "";
   let tracks: TrackDTO[] = [];
-  if (link.type === "playlist") {
+  let notFound = 0;
+  const deezerIds = new Map<string, string>(); // spotifyId -> deezerId
+  if (link.source === "deezer") {
+    const { name: n, items } = await deezerItems(link);
+    name = n;
+    // ISRC via la fiche complète Deezer, puis correspondance sur Spotify (doute → ignoré)
+    const matched = await pool(items, 4, async (it): Promise<TrackDTO | null> => {
+      const full = it.isrc ? it : (await dzTrack(it.id)) || it;
+      const m = await matchOnSpotify(userId, { title: full.title, artist: full.artist?.name || "", isrc: full.isrc, durationSec: full.duration });
+      if (m) deezerIds.set(m.id, String(it.id));
+      return m ? { ...m, bpm: full.bpm && full.bpm > 0 ? full.bpm : m.bpm } : null;
+    });
+    tracks = matched.filter((t): t is TrackDTO => !!t);
+    notFound = items.length - tracks.length;
+  } else if (link.type === "playlist") {
     const meta = await spSafe(userId, `/playlists/${link.id}`, { query: { fields: "name" } });
     name = meta?.name || "Playlist";
     tracks = (await fetchPlaylistTracks(userId, link.id)).map((t) => t.track);
@@ -193,6 +245,7 @@ export async function importFromLink(userId: string, link: SpotifyLink, opts: { 
     name = t ? `${t.title} — ${t.artists.map((a) => a.name).join(", ")}` : "Titre";
   }
   const idMap = await upsertTracks(tracks);
+  for (const [sid, did] of deezerIds) await prisma.track.updateMany({ where: { spotifyId: sid, deezerId: null }, data: { deezerId: did } });
   const trackIds = [...new Set(tracks.map((t) => idMap.get(t.id)).filter(Boolean) as string[])];
   const existing = await prisma.libraryTrack.findMany({ where: { userId, trackId: { in: trackIds } }, select: { trackId: true, status: true } });
   const known = new Map(existing.map((e) => [e.trackId, e.status]));
@@ -220,6 +273,8 @@ export async function importFromLink(userId: string, link: SpotifyLink, opts: { 
     total: trackIds.length,
     added: data.length,
     already: trackIds.length - data.length,
+    notFound,
+    source: link.source || "spotify",
     skippedDeleted: existing.filter((e) => e.status === "deleted").length,
     playlistId,
   };

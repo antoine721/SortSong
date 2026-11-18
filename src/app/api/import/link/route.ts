@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { handler, requireUser, HttpError } from "@/lib/server/session";
-import { importFromLink, parseSpotifyLink } from "@/lib/server/library";
+import { importFromLink, parseSpotifyLink, resolveShortLink } from "@/lib/server/library";
 
 export const maxDuration = 300;
 
@@ -12,9 +12,9 @@ export const POST = handler(async (req: NextRequest) => {
   if (!list.length) throw new HttpError(400, "Colle au moins un lien Spotify");
   const results = [];
   for (const u of list.slice(0, 20)) {
-    const link = parseSpotifyLink(u);
+    const link = parseSpotifyLink(await resolveShortLink(u));
     if (!link) {
-      results.push({ url: u, error: "Lien non reconnu (playlist, album ou titre Spotify attendu)" });
+      results.push({ url: u, error: "Lien non reconnu (playlist, album ou titre Spotify ou Deezer attendu)" });
       continue;
     }
     try {

@@ -34,7 +34,7 @@ export function LinkDialog() {
       const r = await useApp.getState().importLinks(urls, { createPlaylist, folderId: folderId || dlg.folderId || null });
       setResults(r);
       const added = r.reduce((a, x) => a + (x.added || 0), 0);
-      if (!r.some((x) => x.error)) {
+      if (!r.some((x) => x.error || x.notFound)) {
         useApp.getState().toast(`${added} morceau${added > 1 ? "x" : ""} à noter`);
         close();
         const pl = r.find((x) => x.playlistId)?.playlistId;
@@ -52,11 +52,11 @@ export function LinkDialog() {
       <form onSubmit={submit} onMouseDown={(e) => e.stopPropagation()} className="fadein w-full max-w-lg space-y-4 rounded-2xl border border-line bg-bg-1 p-6 shadow-soft">
         <div className="flex items-center gap-2">
           <Link2 className="h-5 w-5 text-accent-2" />
-          <h2 className="flex-1 text-lg font-bold">Importer depuis Spotify</h2>
+          <h2 className="flex-1 text-lg font-bold">Importer depuis Spotify ou Deezer</h2>
           <button type="button" onClick={close} className="text-fg-3 hover:text-fg"><X className="h-5 w-5" /></button>
         </div>
         <p className="text-sm text-fg-2">
-          Colle le lien d'une <b className="text-fg">playlist</b>, d'un <b className="text-fg">album</b> ou d'un <b className="text-fg">titre</b> (dans Spotify : ⋯ → Partager → Copier le lien).
+          Colle le lien d'une <b className="text-fg">playlist</b>, d'un <b className="text-fg">album</b> ou d'un <b className="text-fg">titre</b> Spotify ou Deezer (⋯ → Partager → Copier le lien). Les titres Deezer sont retrouvés sur Spotify.
           Plusieurs liens : un par ligne. Les morceaux arrivent non notés dans « Noter ».
         </p>
         <textarea
@@ -67,7 +67,7 @@ export function LinkDialog() {
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
           }}
-          placeholder={"https://open.spotify.com/playlist/…\nhttps://open.spotify.com/album/…"}
+          placeholder={"https://open.spotify.com/playlist/…\nhttps://www.deezer.com/fr/playlist/…"}
           className="w-full resize-none rounded-xl border border-line bg-bg px-3 py-2.5 text-sm outline-none focus:border-accent"
         />
         <div className="flex flex-wrap items-center gap-3">
@@ -87,7 +87,7 @@ export function LinkDialog() {
                 <div className="min-w-0">
                   <div className="truncate font-medium">{r.name || r.url}</div>
                   <div className="text-xs text-fg-3">
-                    {r.error || `${r.added} ajouté(s) · ${r.already} déjà présent(s)${r.skippedDeleted ? ` dont ${r.skippedDeleted} supprimé(s), ignoré(s)` : ""}`}
+                    {r.error || `${r.added} ajouté(s) · ${r.already} déjà présent(s)${r.skippedDeleted ? ` dont ${r.skippedDeleted} supprimé(s), ignoré(s)` : ""}${r.notFound ? ` · ${r.notFound} introuvable(s) sur Spotify` : ""}`}
                   </div>
                 </div>
               </div>
