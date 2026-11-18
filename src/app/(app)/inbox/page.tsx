@@ -2,7 +2,7 @@
 import { Ban, Trash2, Inbox as InboxIcon, LayoutList, Play, Plus, SkipForward, Square, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ImportButton, PageHeader, PlayButtons } from "@/components/common";
+import { ImportLinkButton, PageHeader, PlayButtons } from "@/components/common";
 import { TrackList } from "@/components/TrackList";
 import { Badges } from "@/components/Badges";
 import { Button, Cover, Empty, Kbd, Spinner, Toggle, cx } from "@/components/ui";
@@ -38,9 +38,9 @@ export default function InboxPage() {
 
   if (!lib.length) {
     return (
-      <Empty icon={<InboxIcon />} title="Bienvenue ! Commence par importer ta bibliothèque">
-        <p className="mb-5">Tes titres likés et toutes tes playlists Spotify sont copiés dans l'app. Rien n'est modifié côté Spotify.</p>
-        <ImportButton mode="full" />
+      <Empty icon={<InboxIcon />} title="Bienvenue ! Importe tes premiers morceaux">
+        <p className="mb-5">Colle le lien d'une playlist, d'un album ou d'un titre Spotify. Rien n'est modifié côté Spotify.</p>
+        <ImportLinkButton />
       </Empty>
     );
   }
@@ -69,13 +69,13 @@ export default function InboxPage() {
           </button>
         </div>
         <div className="ml-auto">
-          <ImportButton mode="sync" variant="secondary" />
+          <ImportLinkButton variant="secondary" />
         </div>
       </PageHeader>
       <div className="px-2 pb-10 md:px-6">
         {!inbox.length ? (
           <Empty icon={<Sparkles />} title="Tout est rangé 🎉">
-            Resynchronise pour récupérer tes nouveaux likes, ou découvre des titres avec un <b>Mix inspiré de</b>.
+            Importe un nouveau lien, ou découvre des titres avec un <b>Mix inspiré de</b>.
           </Empty>
         ) : mode === "list" ? (
           <TrackList tracks={inbox} label="À trier" showAlbum showAdded deletable />

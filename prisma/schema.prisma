@@ -63,7 +63,9 @@ model LibraryTrack {
   trackId   String
   source    String   // liked | playlist | search
   sourceRef String?  // nom de la playlist Spotify d'origine
-  status    String   @default("inbox") // inbox | sorted | dismissed
+  status    String   @default("inbox") // inbox | sorted | dismissed | deleted
+  rating    Int?     // 1-5, null = pas encore noté
+  ratedAt   DateTime?
   addedAt   DateTime // date d'ajout côté Spotify si connue
   firstSeen DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

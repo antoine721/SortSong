@@ -2,7 +2,7 @@
 import { CheckCircle2, Download, Keyboard, Link2, LogOut, MonitorSpeaker, Play, Radio, Tags, Trash2, XCircle } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ImportButton } from "@/components/common";
+import { ImportLinkButton } from "@/components/common";
 import { Button, Cover, Kbd, Spinner, Toggle, cx } from "@/components/ui";
 import { api } from "@/lib/client/api";
 import { TAG_CATEGORIES, PLAYLIST_COLORS } from "@/lib/client/format";
@@ -234,66 +234,19 @@ export default function SettingsPage() {
       </section>
 
       <section className={box}>
-        <h2 className={h2}><Download className="h-5 w-5 text-accent-2" /> Import et synchronisation</h2>
+        <h2 className={h2}><Download className="h-5 w-5 text-accent-2" /> Import</h2>
+        <p className="mb-4 text-sm text-fg-2">
+          Les morceaux s'importent uniquement par lien Spotify (playlist, album ou titre) et arrivent non notés dans « Noter ».
+          Tes likes et tes playlists Spotify ne sont jamais importés automatiquement.
+        </p>
         <div className="flex flex-wrap items-start gap-4">
-          <ImportButton mode="sync" label="Resynchroniser (nouveaux likes et titres)" />
-          <ImportButton mode="full" variant="secondary" label="Réimport complet" />
+          <ImportLinkButton />
           <div className="flex flex-col gap-1">
             <Button variant="secondary" onClick={fetchBpms} disabled={!!bpmBusy}>
               {bpmBusy ? <Spinner /> : null} Récupérer les BPM (Deezer)
             </Button>
             {bpmBusy && <span className="text-xs text-fg-3">{bpmBusy}</span>}
           </div>
-        </div>
-        <div className="mt-6">
-          <h3 className="mb-2 flex items-center gap-2 font-semibold"><Link2 className="h-4 w-4 text-accent-2" /> Ajouter une playlist depuis son lien</h3>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (link.trim()) addLink();
-            }}
-            className="flex gap-2"
-          >
-            <input
-              value={link}
-              onChange={(e) => setLink(e.target.value)}
-              placeholder="https://open.spotify.com/playlist/…"
-              className="h-10 flex-1 rounded-xl border border-line bg-bg-2 px-3 text-sm outline-none focus:border-accent"
-            />
-            <Button type="submit" variant="primary" disabled={linkBusy || !link.trim()}>
-              {linkBusy ? <Spinner /> : null} Ajouter
-            </Button>
-          </form>
-        </div>
-        <div className="mt-6">
-          <div className="mb-2 flex items-center gap-3">
-            <h3 className="font-semibold">Ou choisir parmi mes playlists Spotify</h3>
-            {!spPls && <Button size="sm" onClick={loadSp}>Afficher mes playlists Spotify</Button>}
-          </div>
-          {spPls && (
-            <div className="max-h-[420px] space-y-1 overflow-y-auto pr-1">
-              {spPls.map((pl) => (
-                <div key={pl.id} className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-bg-3">
-                  <Cover src={pl.image} size={40} />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">{pl.name}</div>
-                    <div className="truncate text-xs text-fg-3">{pl.owner}{pl.total != null ? ` · ${pl.total} titres` : ""}</div>
-                  </div>
-                  <select id={`f-${pl.id}`} className="hidden h-8 rounded-lg border border-line bg-bg-2 px-2 text-xs sm:block" defaultValue="">
-                    <option value="">Racine</option>
-                    {folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                  </select>
-                  <Button
-                    size="sm"
-                    disabled={importing === pl.id}
-                    onClick={() => importPl(pl, (document.getElementById(`f-${pl.id}`) as HTMLSelectElement | null)?.value || null)}
-                  >
-                    {importing === pl.id ? <Spinner /> : "Importer"}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </section>
 

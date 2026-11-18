@@ -65,7 +65,7 @@ type PlayerState = {
   setMode: (m: "sdk" | "connect") => void;
   refreshDevices: () => Promise<Device[]>;
   setConnectDevice: (id: string) => Promise<void>;
-  playList: (tracks: TrackDTO[], start: number, label?: string) => Promise<void>;
+  playList: (tracks: TrackDTO[], start: number, label?: string, startMs?: number) => Promise<void>;
   playTrack: (t: TrackDTO) => Promise<void>;
   playNext: (t: TrackDTO) => Promise<void>;
   addToQueueEnd: (t: TrackDTO) => void;
@@ -313,7 +313,7 @@ export const usePlayer = create<PlayerState>((set, get) => {
       }
     },
 
-    playList: async (tracks, start, label) => {
+    playList: async (tracks, start, label, startMs) => {
       if (!tracks.length) return;
       try {
         sdkPlayer?.activateElement?.();
@@ -335,7 +335,8 @@ export const usePlayer = create<PlayerState>((set, get) => {
         duration: tracks[start].durationMs,
         updatedAt: Date.now(),
       });
-      const body = JSON.stringify({ uris, offset: { position: start - winStart } });
+      const body = JSON.stringify({ uris, offset: { position: start - winStart }, ...(startMs ? { position_ms: Math.round(startMs) } : {}) });
+      if (startMs) set({ position: startMs });
       try {
         await spc(`/me/player/play?device_id=${device}`, { method: "PUT", body });
       } catch (e: any) {

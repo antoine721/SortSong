@@ -8,6 +8,8 @@ type Toast = { id: string; text: string; tone?: "ok" | "err" | "info"; undo?: bo
 type UndoEntry = { id: string; label: string; run: () => Promise<void> };
 export type LibTrack = TrackDTO & { source?: string; sourceRef?: string | null };
 
+export type ImportResult = { url: string; error?: string; name?: string; type?: string; total?: number; added?: number; already?: number; skippedDeleted?: number; playlistId?: string | null };
+
 type AddMenu = { track: TrackDTO; x: number; y: number } | null;
 
 type State = {
@@ -19,6 +21,7 @@ type State = {
   membership: Record<string, string[]>;
   library: Set<string>;
   inboxCount: number;
+  unratedCount: number;
   tags: TagDTO[];
   config: BootstrapDTO["config"];
   libTracks: LibTrack[] | null;
@@ -59,6 +62,8 @@ type State = {
   createTag: (name: string, category: string, color?: string) => Promise<TagDTO>;
   deleteTracks: (tracks: TrackDTO[]) => Promise<void>;
   importPlaylistLink: (url: string, folderId?: string | null) => Promise<string>;
+  importLinks: (urls: string, opts?: { createPlaylist?: boolean; folderId?: string | null }) => Promise<ImportResult[]>;
+  rate: (track: TrackDTO, rating: number | null, opts?: { record?: boolean }) => Promise<void>;
   linkDialog: { folderId: string | null } | null;
 };
 
@@ -77,6 +82,7 @@ export const useApp = create<State>((set, get) => ({
   membership: {},
   library: new Set(),
   inboxCount: 0,
+  unratedCount: 0,
   tags: [],
   config: { lastfm: false },
   libTracks: null,
@@ -110,6 +116,7 @@ export const useApp = create<State>((set, get) => ({
         membership: b.membership,
         library: new Set(b.library),
         inboxCount: b.inboxCount,
+        unratedCount: b.unratedCount,
         tags: b.tags,
         config: b.config,
         hideSorted,
@@ -133,6 +140,8 @@ export const useApp = create<State>((set, get) => ({
   },
 
   toast: (text, opts = {}) => {
+    // Même message déjà affiché (hors « Annuler ») : on ne l'empile pas.
+    if (!opts.undo && get().toasts.some((x) => x.text === text && !x.undo)) return;
     const t: Toast = { id: uid(), text, tone: opts.tone || "ok", undo: opts.undo, at: Date.now() };
     set({ toasts: [...get().toasts.slice(-3), t] });
     setTimeout(() => get().dropToast(t.id), opts.undo ? 6000 : 3500);
@@ -459,6 +468,50 @@ export const useApp = create<State>((set, get) => ({
     });
     get().toast(`« ${name} » ajoutée (${r.count} titres)`, { undo: true });
     return r.id;
+  },
+
+  importLinks: async (urls, opts = {}) => {
+    const { results } = await api<{ results: ImportResult[] }>("/api/import/link", { json: { urls, ...opts } });
+    await Promise.all([get().bootstrap(), get().loadLibrary(true)]);
+    return results;
+  },
+
+  rate: async (track, rating, opts = {}) => {
+    const s = get();
+    const prev = s.libTracks?.find((t) => t.id === track.id);
+    const prevRating = prev ? prev.rating ?? null : null;
+    const wasDeleted = !s.library.has(track.id);
+    const library = new Set(s.library);
+    const membership = { ...s.membership };
+    let libTracks = s.libTracks;
+    if (rating === 0) {
+      library.delete(track.id);
+      delete membership[track.id];
+      libTracks = libTracks?.filter((t) => t.id !== track.id) ?? null;
+    } else {
+      library.add(track.id);
+      if (libTracks) {
+        libTracks = libTracks.some((t) => t.id === track.id)
+          ? libTracks.map((t) => (t.id === track.id ? { ...t, rating } : t))
+          : [{ ...track, rating, status: "inbox", addedAt: track.addedAt || new Date().toISOString() }, ...libTracks];
+      }
+    }
+    set({ library, membership, libTracks });
+    try {
+      const r = await api<{ inboxCount: number; unratedCount: number }>("/api/library/rate", { json: { track, rating } });
+      set({ inboxCount: r.inboxCount, unratedCount: r.unratedCount });
+      if (rating === 0 && s.membership[track.id]?.length) set({ playlists: get().playlists, playlistVersion: bump(get().playlistVersion, s.membership[track.id]) });
+    } catch (e) {
+      set({ library: s.library, membership: s.membership, libTracks: s.libTracks });
+      get().toast(`Note non enregistrée : ${(e as Error).message}`, { tone: "err" });
+      return;
+    }
+    if (opts.record !== false) {
+      get().pushUndo(rating === 0 ? `suppression de « ${track.title} »` : `note de « ${track.title} »`, async () => {
+        await get().rate(track, wasDeleted && rating !== 0 ? 0 : prevRating, { record: false });
+        if (rating === 0) await get().bootstrap();
+      });
+    }
   },
 
   createTag: async (name, category, color) => {

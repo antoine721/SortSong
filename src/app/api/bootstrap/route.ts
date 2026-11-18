@@ -10,7 +10,7 @@ export const GET = handler(async () => {
     prisma.folder.findMany({ where: { userId: user.id }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] }),
     playlistDTOs(user.id),
     membershipMap(user.id),
-    prisma.libraryTrack.findMany({ where: { userId: user.id, status: { not: "deleted" } }, select: { status: true, track: { select: { spotifyId: true } } } }),
+    prisma.libraryTrack.findMany({ where: { userId: user.id, status: { not: "deleted" } }, select: { status: true, rating: true, track: { select: { spotifyId: true } } } }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: [{ category: "asc" }, { name: "asc" }] }),
   ]);
   const sixMonths = 182 * 86400_000;
@@ -30,6 +30,7 @@ export const GET = handler(async () => {
     membership,
     library: lib.map((l) => l.track.spotifyId),
     inboxCount: lib.filter((l) => l.status === "inbox").length,
+    unratedCount: lib.filter((l) => l.rating == null).length,
     tags: tags.map((t) => ({ id: t.id, name: t.name, category: t.category, color: t.color })),
     config: { lastfm: await hasLastfm() },
   };

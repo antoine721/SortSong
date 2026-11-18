@@ -20,6 +20,7 @@ export type TrackDTO = {
   note?: string | null; // note dans une playlist
   tagIds?: string[];
   status?: "inbox" | "sorted" | "dismissed";
+  rating?: number | null; // 1-5, null = non noté
 };
 
 export type ArtistDTO = {
@@ -95,6 +96,7 @@ export type BootstrapDTO = {
   membership: Record<string, string[]>; // spotifyId -> playlistIds
   library: string[]; // spotifyIds de la bibliothèque
   inboxCount: number;
+  unratedCount: number;
   tags: TagDTO[];
   config: { lastfm: boolean };
 };

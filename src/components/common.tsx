@@ -1,5 +1,5 @@
 "use client";
-import { Play, RefreshCw, Shuffle } from "lucide-react";
+import { Link2, Play, RefreshCw, Shuffle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import type { AlbumDTO, ArtistDTO, TrackDTO } from "@/lib/types";
@@ -124,6 +124,14 @@ export function ArtistGrid({ artists }: { artists: ArtistDTO[] }) {
         </Link>
       ))}
     </div>
+  );
+}
+
+export function ImportLinkButton({ variant = "primary" }: { variant?: "primary" | "secondary" }) {
+  return (
+    <Button variant={variant} onClick={() => useApp.setState({ linkDialog: { folderId: null } })}>
+      <Link2 className="h-4 w-4" /> Importer un lien Spotify
+    </Button>
   );
 }
 

@@ -11,6 +11,6 @@ export const GET = handler(async () => {
     orderBy: { addedAt: "desc" },
   });
   return {
-    tracks: rows.map((r) => ({ ...rowToDTO(r.track), addedAt: r.addedAt.toISOString(), status: r.status, source: r.source, sourceRef: r.sourceRef })),
+    tracks: rows.map((r) => ({ ...rowToDTO(r.track), addedAt: r.addedAt.toISOString(), status: r.status, rating: r.rating, source: r.source, sourceRef: r.sourceRef })),
   };
 });

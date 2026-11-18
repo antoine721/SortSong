@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       authorizedAt: new Date(),
     };
     const user = await prisma.user.upsert({ where: { spotifyUserId: me.id }, create: { spotifyUserId: me.id, ...data }, update: data });
-    const res = NextResponse.redirect(new URL("/inbox", base));
+    const res = NextResponse.redirect(new URL("/rate", base));
     res.cookies.set(SESSION_COOKIE, sessionCookieValue(user.id), { httpOnly: true, sameSite: "lax", path: "/", maxAge: SESSION_MAX_AGE, secure: origin.startsWith("https") });
     res.cookies.delete("ss_redirect");
     res.cookies.delete("ss_pkce");

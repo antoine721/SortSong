@@ -157,3 +157,70 @@ export function parsePlaylistLink(input: string): string | null {
     /^([A-Za-z0-9]{22})$/.exec(s);
   return m ? m[1] : null;
 }
+
+export type SpotifyLink = { type: "playlist" | "album" | "track"; id: string };
+
+/** Lien Spotify (open.spotify.com/…, spotify:type:id) → type + ID. */
+export function parseSpotifyLink(input: string): SpotifyLink | null {
+  const s = input.trim();
+  const m =
+    /open\.spotify\.com\/(?:[a-z-]+\/)*(playlist|album|track)\/([A-Za-z0-9]{22})/.exec(s) ||
+    /spotify:(playlist|album|track):([A-Za-z0-9]{22})/.exec(s);
+  return m ? { type: m[1] as SpotifyLink["type"], id: m[2] } : null;
+}
+
+/**
+ * Import par lien : les morceaux d'une playlist, d'un album ou un titre seul entrent dans la bibliothèque,
+ * non notés. Un titre supprimé auparavant n'est pas réimporté. Option : créer aussi une playlist interne.
+ */
+export async function importFromLink(userId: string, link: SpotifyLink, opts: { createPlaylist?: boolean; folderId?: string | null } = {}) {
+  let name = "";
+  let tracks: TrackDTO[] = [];
+  if (link.type === "playlist") {
+    const meta = await spSafe(userId, `/playlists/${link.id}`, { query: { fields: "name" } });
+    name = meta?.name || "Playlist";
+    tracks = (await fetchPlaylistTracks(userId, link.id)).map((t) => t.track);
+  } else if (link.type === "album") {
+    const raw = await sp(userId, `/albums/${link.id}`);
+    name = raw.name;
+    let items: any[] = raw.tracks?.items || [];
+    if (raw.tracks?.next) items = [...items, ...(await paginate(userId, raw.tracks.next, 500))];
+    tracks = items.map((t) => normTrack(t, raw)).filter(Boolean) as TrackDTO[];
+  } else {
+    const raw = await sp(userId, `/tracks/${link.id}`);
+    const t = normTrack(raw);
+    if (t) tracks = [t];
+    name = t ? `${t.title} — ${t.artists.map((a) => a.name).join(", ")}` : "Titre";
+  }
+  const idMap = await upsertTracks(tracks);
+  const trackIds = [...new Set(tracks.map((t) => idMap.get(t.id)).filter(Boolean) as string[])];
+  const existing = await prisma.libraryTrack.findMany({ where: { userId, trackId: { in: trackIds } }, select: { trackId: true, status: true } });
+  const known = new Map(existing.map((e) => [e.trackId, e.status]));
+  const now = Date.now();
+  // addedAt décalé d'1 ms par titre pour garder l'ordre d'origine
+  const data = trackIds
+    .filter((id) => !known.has(id))
+    .map((trackId, i) => ({ userId, trackId, source: link.type, sourceRef: name, status: "inbox", addedAt: new Date(now + i) }));
+  for (let k = 0; k < data.length; k += 500) await prisma.libraryTrack.createMany({ data: data.slice(k, k + 500) });
+
+  let playlistId: string | null = null;
+  if (opts.createPlaylist && link.type !== "track" && trackIds.length) {
+    const max = await prisma.playlist.aggregate({ where: { userId, folderId: opts.folderId ?? null }, _max: { position: true } });
+    const colors = ["#7c5cff", "#22c55e", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899", "#84cc16", "#f97316"];
+    const pl = await prisma.playlist.create({
+      data: { userId, name, folderId: opts.folderId ?? null, color: colors[Math.floor(Math.random() * colors.length)], position: (max._max.position ?? -1) + 1 },
+    });
+    playlistId = pl.id;
+    await prisma.playlistTrack.createMany({ data: trackIds.map((trackId, position) => ({ playlistId: pl.id, trackId, position })) });
+    await refreshStatus(userId, trackIds);
+  }
+  return {
+    name,
+    type: link.type,
+    total: trackIds.length,
+    added: data.length,
+    already: trackIds.length - data.length,
+    skippedDeleted: existing.filter((e) => e.status === "deleted").length,
+    playlistId,
+  };
+}

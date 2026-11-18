@@ -7,6 +7,7 @@ import { api } from "@/lib/client/api";
 import { CAMELOT, CAMELOT_MUSICAL, TAG_CATEGORIES, fmtDuration } from "@/lib/client/format";
 import { useApp, useTrackMeta } from "@/store/app";
 import { Button, Cover, cx } from "./ui";
+import { Stars } from "./Stars";
 
 /** Fiche du morceau : playlists qui le contiennent, BPM, tonalité Camelot, énergie, tags (G2-G4). */
 export function TrackSheet({ track }: { track: TrackDTO }) {
@@ -19,6 +20,7 @@ export function TrackSheet({ track }: { track: TrackDTO }) {
   const [fetching, setFetching] = useState(false);
   const [newTag, setNewTag] = useState<{ cat: string; name: string } | null>(null);
   const [tap, setTap] = useState<number[]>([]);
+  const rating = useApp((s) => s.libTracks?.find((t) => t.id === track.id)?.rating ?? null);
 
   useEffect(() => setBpmInput(meta.bpm ? String(Math.round(meta.bpm * 10) / 10) : ""), [meta.bpm, track.id]);
 
@@ -168,19 +170,12 @@ export function TrackSheet({ track }: { track: TrackDTO }) {
         </div>
       </Section>
 
+      <Section title="Ma note">
+        <Stars value={rating} onChange={(v) => useApp.getState().rate(track, v)} size={24} />
+      </Section>
+
       <Section title="Énergie">
-        <div className="flex gap-1.5">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              onClick={() => update(track, { energy: meta.energy === n ? null : n })}
-              className={cx("h-8 flex-1 rounded-lg text-sm font-bold transition", (meta.energy || 0) >= n ? "text-white" : "bg-bg-3 text-fg-3 hover:bg-bg-4")}
-              style={(meta.energy || 0) >= n ? { background: `hsl(${260 - n * 45} 80% 58%)` } : undefined}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
+        <Stars value={meta.energy} onChange={(v) => update(track, { energy: v })} size={24} color="#f97316" />
       </Section>
 
       {TAG_CATEGORIES.map((cat) => {

@@ -1,9 +1,10 @@
 "use client";
 import { Filter, Library, Search, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { ImportButton, PageHeader, PlayButtons } from "@/components/common";
+import { ImportLinkButton, PageHeader, PlayButtons } from "@/components/common";
 import { TrackList, type Sort } from "@/components/TrackList";
 import { Button, Chip, Empty, Spinner, cx } from "@/components/ui";
+import { Stars } from "@/components/Stars";
 import { CAMELOT, TAG_CATEGORIES, camelotCompat, fmtLong, plural } from "@/lib/client/format";
 import { searchLibrary } from "@/lib/client/librarySearch";
 import { useApp, type LibTrack } from "@/store/app";
@@ -22,8 +23,9 @@ type F = {
   compat: boolean;
   energyMin: number;
   tagIds: string[];
+  rating: "all" | "unrated" | number;
 };
-const INIT: F = { q: "", status: "all", playlistId: "", folderId: "", artist: "", added: 0, duration: "all", bpmMin: "", bpmMax: "", key: "", compat: false, energyMin: 0, tagIds: [] };
+const INIT: F = { q: "", status: "all", playlistId: "", folderId: "", artist: "", added: 0, duration: "all", bpmMin: "", bpmMax: "", key: "", compat: false, energyMin: 0, tagIds: [], rating: "all" };
 
 export default function LibraryPage() {
   const lib = useApp((s) => s.libTracks);
@@ -81,6 +83,8 @@ export default function LibraryPage() {
     if (bmin || bmax) list = list.filter((t) => t.bpm && (!bmin || t.bpm >= bmin) && (!bmax || t.bpm <= bmax));
     if (f.key) list = list.filter((t) => (f.compat ? camelotCompat(f.key, t.key) !== "bad" && t.key : t.key === f.key));
     if (f.energyMin) list = list.filter((t) => (t.energy || 0) >= f.energyMin);
+    if (f.rating === "unrated") list = list.filter((t) => t.rating == null);
+    else if (typeof f.rating === "number") list = list.filter((t) => (t.rating || 0) >= (f.rating as number));
     if (f.tagIds.length) list = list.filter((t) => f.tagIds.every((id) => t.tagIds?.includes(id)));
 
     const dir = sort.dir === "asc" ? 1 : -1;
@@ -91,6 +95,7 @@ export default function LibraryPage() {
       addedAt: (a, b) => (a.addedAt || "").localeCompare(b.addedAt || ""),
       bpm: (a, b) => (a.bpm || 0) - (b.bpm || 0),
       duration: (a, b) => a.durationMs - b.durationMs,
+      rating: (a, b) => (a.rating || 0) - (b.rating || 0),
     };
     if (!f.q.trim() || sort.key !== "addedAt") list = [...list].sort((a, b) => (cmp[sort.key]?.(a, b) || 0) * dir);
     return list;
@@ -102,8 +107,8 @@ export default function LibraryPage() {
   if (!lib.length)
     return (
       <Empty icon={<Library />} title="Ta bibliothèque est vide">
-        <p className="mb-5">Importe tes titres likés et tes playlists Spotify.</p>
-        <ImportButton mode="full" />
+        <p className="mb-5">Colle le lien d'une playlist, d'un album ou d'un titre Spotify.</p>
+        <ImportLinkButton />
       </Empty>
     );
 
@@ -142,7 +147,7 @@ export default function LibraryPage() {
           )}
         </div>
         <div className="ml-auto">
-          <ImportButton mode="sync" variant="secondary" />
+          <ImportLinkButton variant="secondary" />
         </div>
       </PageHeader>
 
@@ -154,6 +159,17 @@ export default function LibraryPage() {
               {{ all: "Tous", inbox: "Non rangés", sorted: "Rangés", dismissed: "Écartés" }[s]}
             </Chip>
           ))}
+          <select
+            value={String(f.rating)}
+            onChange={(e) => set({ rating: e.target.value === "all" || e.target.value === "unrated" ? (e.target.value as F["rating"]) : Number(e.target.value) })}
+            className={sel}
+          >
+            <option value="all">Toutes les notes</option>
+            <option value="unrated">Non notés</option>
+            {[5, 4, 3, 2, 1].map((n) => (
+              <option key={n} value={n}>{"★".repeat(n)}{n < 5 ? " et +" : ""}</option>
+            ))}
+          </select>
           <select value={f.playlistId} onChange={(e) => set({ playlistId: e.target.value })} className={sel}>
             <option value="">Toutes les playlists</option>
             <option value="__none">Dans aucune playlist</option>
@@ -220,13 +236,7 @@ export default function LibraryPage() {
             </div>
             <div>
               <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-3">Énergie min.</div>
-              <div className="flex gap-1">
-                {[0, 1, 2, 3, 4, 5].map((n) => (
-                  <button key={n} onClick={() => set({ energyMin: n })} className={cx("h-8 w-8 rounded-lg text-xs font-bold", f.energyMin === n ? "bg-accent text-white" : "bg-bg-3 text-fg-2")}>
-                    {n || "–"}
-                  </button>
-                ))}
-              </div>
+              <Stars value={f.energyMin || null} onChange={(v) => set({ energyMin: v || 0 })} size={22} color="#f97316" />
             </div>
             <div className="md:col-span-2 xl:col-span-1">
               <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-3">Tags</div>

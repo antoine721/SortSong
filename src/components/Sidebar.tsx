@@ -1,6 +1,6 @@
 "use client";
 import {
-  ChevronRight, Disc3, Link2, Folder, FolderOpen, FolderPlus, Inbox, Library, ListMusic, MoreHorizontal, Pencil, Plus, Search, Settings, Sparkles, Trash2, Wand2, X,
+  ChevronRight, Disc3, Link2, Star, Folder, FolderOpen, FolderPlus, Inbox, Library, ListMusic, MoreHorizontal, Pencil, Plus, Search, Settings, Sparkles, Trash2, Wand2, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -18,6 +18,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const inboxCount = useApp((s) => s.inboxCount);
+  const unratedCount = useApp((s) => s.unratedCount);
   const me = useApp((s) => s.me);
   const folders = useApp((s) => s.folders);
   const playlists = useApp((s) => s.playlists);
@@ -43,6 +44,7 @@ export function Sidebar() {
   };
 
   const nav = [
+    { href: "/rate", label: "Noter", icon: Star, count: unratedCount },
     { href: "/inbox", label: "À trier", icon: Inbox, count: inboxCount },
     { href: "/library", label: "Bibliothèque", icon: Library },
     { href: "/settings", label: "Réglages", icon: Settings },
@@ -75,6 +77,12 @@ export function Sidebar() {
             <Search className="h-4 w-4" />
             <span className="flex-1 text-left">Rechercher</span>
             <Kbd>Ctrl K</Kbd>
+          </button>
+          <button
+            onClick={() => useApp.setState({ linkDialog: { folderId: null }, mobileNav: false })}
+            className="mb-2 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-accent text-sm font-semibold text-white shadow-[0_6px_24px_-8px_rgba(124,92,255,0.8)] transition hover:bg-accent-2"
+          >
+            <Link2 className="h-4 w-4" /> Importer un lien Spotify
           </button>
           {nav.map((n) => {
             const active = pathname.startsWith(n.href);
@@ -128,7 +136,7 @@ export function Sidebar() {
               Playlist intelligente
             </MenuItem>
             <MenuItem icon={<Link2 />} onClick={() => (setNewMenu(null), useApp.setState({ linkDialog: { folderId: null } }))}>
-              Depuis un lien Spotify…
+              Playlist depuis un lien Spotify…
             </MenuItem>
           </Popover>
         )}

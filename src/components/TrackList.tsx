@@ -8,10 +8,11 @@ import { fmtDate, fmtDuration } from "@/lib/client/format";
 import { useApp, useTrackMeta } from "@/store/app";
 import { usePlayer } from "@/store/player";
 import { Badges } from "./Badges";
+import { Stars } from "./Stars";
 import { TrackMenu } from "./TrackMenu";
 import { Cover, cx } from "./ui";
 
-export type SortKey = "title" | "artist" | "addedAt" | "bpm" | "duration" | "album" | "position";
+export type SortKey = "title" | "artist" | "addedAt" | "bpm" | "duration" | "album" | "position" | "rating";
 export type Sort = { key: SortKey; dir: "asc" | "desc" };
 
 type Opts = {
@@ -148,6 +149,7 @@ function Header({ sort, onSort, showAlbum, showAdded, showNote, showIndex, reord
       <H k="title" className="min-w-0 flex-[3]">Titre</H>
       {showAlbum && <H k="album" className="hidden min-w-0 flex-[2] lg:flex">Album</H>}
       {showNote && <span className="hidden min-w-0 flex-[2] xl:block">Note</span>}
+      <H k="rating" className="hidden w-[76px] xl:flex">Note</H>
       <span className="hidden w-36 sm:block">Playlists</span>
       <H k="bpm" className="hidden w-12 justify-end md:flex">BPM</H>
       <span className="hidden w-9 text-center md:block">Clé</span>
@@ -186,6 +188,7 @@ const TrackRow = memo(function TrackRow({
   const isCurrent = usePlayer((s) => s.current?.id === track.id);
   const paused = usePlayer((s) => s.paused);
   const meta = useTrackMeta(track);
+  const rating = useApp((s) => s.libTracks?.find((t) => t.id === track.id)?.rating ?? track.rating ?? null);
   const [menu, setMenu] = useState<DOMRect | { x: number; y: number } | null>(null);
   const [note, setNote] = useState(track.note || "");
   useEffect(() => setNote(track.note || ""), [track.note]);
@@ -283,6 +286,10 @@ const TrackRow = memo(function TrackRow({
           />
         </div>
       )}
+      <div className="hidden w-[76px] xl:block" title={meta.energy ? `Énergie ${meta.energy}/5` : undefined}>
+        {rating ? <Stars value={rating} size={12} /> : <span className="text-[11px] text-fg-3">non noté</span>}
+        {meta.energy ? <div className="mt-0.5"><Stars value={meta.energy} size={9} color="#f97316" /></div> : null}
+      </div>
       <div className="hidden w-36 sm:block">
         <Badges trackId={track.id} />
       </div>
