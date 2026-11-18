@@ -8,6 +8,7 @@ import { fmtDuration } from "@/lib/client/format";
 import type { TrackDTO } from "@/lib/types";
 import { useApp, type LibTrack } from "@/store/app";
 import { usePlayer } from "@/store/player";
+import { hasPreview, playPreview, preloadPreviews, resolvePreviews, seekPreview, setPreviewVolume, stopPreviews, togglePreview, usePreview } from "@/lib/client/preview";
 
 const START_MS = 30_000;
 const LABELS = ["Pas pour moi", "Bof", "Moyen", "Bien", "Très bien", "Pépite"];
@@ -26,6 +27,11 @@ export default function RatePage() {
   const [given, setGiven] = useState<Record<string, number>>({}); // notes données pendant la session (0 = supprimé)
   const [autoplay, setAutoplay] = useState(true);
   const [fromDrop, setFromDrop] = useState(false);
+  // « preview » = extraits 30 s Deezer joués dans la page (préchargés) ; « full » = morceau complet via Spotify
+  const [source, setSource] = useState<"preview" | "full">("preview");
+  const [fallback, setFallback] = useState<string | null>(null); // id joué via Spotify faute d'extrait
+  const pv = usePreview();
+  const volume = usePlayer((s) => s.volume);
   const [flash, setFlash] = useState<{ id: string; n: number } | null>(null);
   const lastPlayed = useRef<string | null>(null);
 
@@ -34,8 +40,11 @@ export default function RatePage() {
     try {
       setAutoplay(localStorage.getItem("ss_rate_autoplay") !== "0");
       setFromDrop(localStorage.getItem("ss_rate_drop") === "1");
+      if (localStorage.getItem("ss_rate_source") === "full") setSource("full");
     } catch {}
   }, []);
+  useEffect(() => () => stopPreviews(), []);
+  useEffect(() => setPreviewVolume(volume), [volume]);
   const persist = (k: string, v: boolean) => {
     try {
       localStorage.setItem(k, v ? "1" : "0");
@@ -57,7 +66,7 @@ export default function RatePage() {
   const track = list?.[idx];
   const done = list ? list.filter((t) => given[t.id] !== undefined).length : 0;
 
-  const play = useCallback(
+  const playFull = useCallback(
     (i: number) => {
       if (!list?.[i]) return;
       const rest = list.slice(i).filter((t) => given[t.id] !== 0);
@@ -69,6 +78,48 @@ export default function RatePage() {
     },
     [list, given, fromDrop],
   );
+
+  const play = useCallback(
+    async (i: number) => {
+      const t = list?.[i];
+      if (!t) return;
+      lastPlayed.current = t.id;
+      if (source === "full") {
+        stopPreviews();
+        setFallback(null);
+        return playFull(i);
+      }
+      // Coupe Spotify s'il jouait, pour ne pas superposer deux sons.
+      const p = usePlayer.getState();
+      if (p.current && !p.paused) p.toggle();
+      await resolvePreviews([t.id]);
+      if (lastPlayed.current !== t.id) return; // l'utilisateur est déjà passé au suivant
+      if (await playPreview(t.id)) setFallback(null);
+      else {
+        stopPreviews();
+        setFallback(t.id);
+        playFull(i);
+      }
+    },
+    [list, source, playFull],
+  );
+
+  // Précharge les extraits des 3 morceaux suivants (et résout les URL un peu plus loin).
+  useEffect(() => {
+    if (source !== "preview" || !list) return;
+    const ahead = list.slice(idx, idx + 7).filter((t) => given[t.id] !== 0).map((t) => t.id);
+    if (!ahead.length) return;
+    let cancel = false;
+    resolvePreviews(ahead.slice(0, 4))
+      .then(() => {
+        if (!cancel) preloadPreviews(ahead.slice(0, 4));
+        return resolvePreviews(ahead);
+      })
+      .catch(() => {});
+    return () => {
+      cancel = true;
+    };
+  }, [idx, list, source, given]);
 
   // Lecture automatique du morceau affiché
   useEffect(() => {
@@ -102,6 +153,10 @@ export default function RatePage() {
         e.preventDefault();
         e.stopImmediatePropagation();
         if (!e.repeat) give(Number(digit));
+      } else if (e.key === " " && usePreview.getState().playingId && !fallback) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        togglePreview();
       } else if (e.key === "ArrowLeft" && !e.shiftKey) {
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -116,7 +171,7 @@ export default function RatePage() {
     };
     window.addEventListener("keydown", onKey, { capture: true });
     return () => window.removeEventListener("keydown", onKey, { capture: true } as any);
-  }, [give, list]);
+  }, [give, list, fallback]);
 
   const window5 = useMemo(() => {
     if (!list) return [];
@@ -127,7 +182,8 @@ export default function RatePage() {
 
   if (!list) return <div className="grid h-64 place-items-center"><Spinner /></div>;
 
-  const isPlaying = current?.id === track?.id && !paused;
+  const previewing = source === "preview" && !!track && pv.playingId === track.id && fallback !== track.id;
+  const isPlaying = previewing ? !pv.paused : current?.id === track?.id && !paused;
   const currentRating = track ? given[track.id] ?? track.rating ?? null : null;
 
   return (
@@ -142,7 +198,32 @@ export default function RatePage() {
           </span>
           <div className="ml-auto flex flex-wrap items-center gap-4 text-white/90 [&_span]:!text-white/90">
             <Toggle checked={autoplay} onChange={(v) => (setAutoplay(v), persist("ss_rate_autoplay", v))} label="Lecture auto" />
-            <Toggle checked={fromDrop} onChange={(v) => (setFromDrop(v), persist("ss_rate_drop", v))} label="Démarrer au drop (sinon à 0:30)" />
+            <div className="flex rounded-full bg-black/20 p-1 text-sm backdrop-blur">
+              {(["preview", "full"] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => {
+                    setSource(v);
+                    try {
+                      localStorage.setItem("ss_rate_source", v);
+                    } catch {}
+                    lastPlayed.current = null;
+                    if (v === "full") stopPreviews();
+                    else {
+                      const p = usePlayer.getState();
+                      if (p.current && !p.paused) p.toggle();
+                    }
+                  }}
+                  className={cx("h-7 rounded-full px-3 font-medium transition", source === v ? "bg-white text-[#581c87]" : "text-white/85 hover:text-white")}
+                  title={v === "preview" ? "Extraits de 30 s préchargés, joués dans la page (instantané, sans l'appli Spotify)" : "Morceau complet via Spotify"}
+                >
+                  {v === "preview" ? "Extraits 30 s" : "Morceau complet"}
+                </button>
+              ))}
+            </div>
+            {source === "full" && (
+              <Toggle checked={fromDrop} onChange={(v) => (setFromDrop(v), persist("ss_rate_drop", v))} label="Démarrer au drop (sinon à 0:30)" />
+            )}
           </div>
         </div>
 
@@ -198,11 +279,21 @@ export default function RatePage() {
                       )}
                       {center && (
                         <button
-                          onClick={() => (current?.id === t.id ? usePlayer.getState().toggle() : play(i))}
+                          onClick={() => {
+                            if (previewing) togglePreview();
+                            else if (current?.id === t.id && fallback === t.id) usePlayer.getState().toggle();
+                            else if (current?.id === t.id && source === "full") usePlayer.getState().toggle();
+                            else play(i);
+                          }}
                           className="absolute inset-0 grid place-items-center bg-black/0 opacity-0 transition hover:bg-black/30 hover:opacity-100"
                           title="Lecture / pause (Espace)"
                         >
                           {isPlaying ? <Pause className="h-16 w-16 fill-white text-white" /> : <Play className="h-16 w-16 fill-white text-white" />}
+                        </button>
+                      )}
+                      {center && previewing && pv.blocked && (
+                        <button onClick={togglePreview} className="absolute inset-x-3 bottom-3 rounded-xl bg-black/70 px-3 py-2 text-sm font-semibold text-white">
+                          ▶ Clique (ou Espace) pour activer le son
                         </button>
                       )}
                       {center && isPlaying && (
@@ -217,6 +308,18 @@ export default function RatePage() {
                         </span>
                       )}
                     </div>
+                    {center && previewing && (
+                      <div
+                        className="mt-2 h-1.5 cursor-pointer overflow-hidden rounded-full bg-[#e9d5ff]"
+                        onClick={(e) => {
+                          const r = e.currentTarget.getBoundingClientRect();
+                          seekPreview(((e.clientX - r.left) / r.width) * (pv.duration || 30));
+                        }}
+                        title="Extrait de 30 s"
+                      >
+                        <div className="h-full rounded-full bg-gradient-to-r from-[#7c3aed] to-[#db2777]" style={{ width: `${Math.min(100, (pv.time / (pv.duration || 30)) * 100)}%` }} />
+                      </div>
+                    )}
                     <div className="px-1.5 pb-1 pt-3 text-[#2e1065]">
                       <div className={cx("truncate font-bold", center ? "text-lg" : "text-base")}>{t.title}</div>
                       <div className="truncate text-sm text-[#6b21a8]/80">{t.artists.map((a) => a.name).join(", ")}</div>
@@ -235,6 +338,14 @@ export default function RatePage() {
                 <span>{track.album}</span>·<span>{fmtDuration(track.durationMs)}</span>
                 {track.bpm ? <>·<span>{Math.round(track.bpm)} BPM</span></> : null}
                 {track.sourceRef && <>·<span className="truncate">de « {track.sourceRef} »</span></>}
+                {source === "preview" && (
+                  <>
+                    ·
+                    <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs">
+                      {fallback === track.id ? "pas d'extrait → Spotify" : hasPreview(track.id) === false ? "pas d'extrait" : "extrait 30 s"}
+                    </span>
+                  </>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 <button

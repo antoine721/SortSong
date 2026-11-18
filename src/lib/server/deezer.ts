@@ -22,9 +22,9 @@ async function throttle() {
   }
 }
 
-export async function dz<T = any>(path: string, attempt = 0): Promise<T | null> {
+export async function dz<T = any>(path: string, attempt = 0, ttl = TTL): Promise<T | null> {
   const hit = cache.get(path);
-  if (hit && Date.now() - hit.at < TTL) return hit.data;
+  if (hit && Date.now() - hit.at < ttl) return hit.data;
   await throttle();
   try {
     const res = await fetch(`${API}${path}`, { cache: "no-store", signal: AbortSignal.timeout(8000) });
@@ -34,7 +34,7 @@ export async function dz<T = any>(path: string, attempt = 0): Promise<T | null> 
       // code 4 = quota dépassé
       if (json.error.code === 4 && attempt < 3) {
         await sleep(1500);
-        return dz<T>(path, attempt + 1);
+        return dz<T>(path, attempt + 1, ttl);
       }
       return null;
     }
@@ -47,6 +47,7 @@ export async function dz<T = any>(path: string, attempt = 0): Promise<T | null> 
 
 export type DzTrack = {
   id: number;
+  preview?: string;
   title: string;
   title_short?: string;
   duration: number;
@@ -60,8 +61,8 @@ export async function dzTrackByIsrc(isrc: string): Promise<DzTrack | null> {
   return dz<DzTrack>(`/track/isrc:${encodeURIComponent(isrc)}`);
 }
 
-export async function dzTrack(id: number | string): Promise<DzTrack | null> {
-  return dz<DzTrack>(`/track/${id}`);
+export async function dzTrack(id: number | string, ttl?: number): Promise<DzTrack | null> {
+  return dz<DzTrack>(`/track/${id}`, 0, ttl);
 }
 
 export async function dzSearchTrack(title: string, artist: string): Promise<DzTrack[]> {

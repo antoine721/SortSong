@@ -34,7 +34,7 @@ export async function fetchBpm(spotifyId: string): Promise<number | null> {
   const row = await prisma.track.findUnique({ where: { spotifyId } });
   if (!row) return null;
   if (row.bpmSource === "manual" && row.bpm) return row.bpm;
-  let dzt: DzTrack | null = row.deezerId ? await dzTrack(row.deezerId) : null;
+  let dzt: DzTrack | null = row.deezerId && row.deezerId !== "none" ? await dzTrack(row.deezerId) : null;
   if (!dzt) {
     const artist = JSON.parse(row.artists)[0]?.name || "";
     dzt = await findOnDeezer({ title: row.title, artist, isrc: row.isrc, durationMs: row.durationMs });
@@ -144,4 +144,33 @@ export async function buildMix(userId: string, seed: Seed, opts: { refresh?: boo
     update: { results: JSON.stringify(out.map((t) => t.id)), createdAt: new Date() },
   });
   return enrich(out);
+}
+
+/** Les URL d'extraits Deezer sont signées et expirent : on les relit au plus toutes les 10 min. */
+const PREVIEW_TTL = 10 * 60 * 1000;
+
+/**
+ * Extrait de 30 s (MP3 Deezer) pour un morceau Spotify : ISRC d'abord, sinon titre + artiste.
+ * Mémorise l'ID Deezer (et le BPM s'il est connu) pour les fois suivantes.
+ */
+export async function previewFor(spotifyId: string): Promise<string | null> {
+  const row = await prisma.track.findUnique({ where: { spotifyId } });
+  if (!row) return null;
+  if (row.deezerId === "none") return null; // déjà cherché, introuvable
+  let dzt: DzTrack | null = row.deezerId ? await dzTrack(row.deezerId, PREVIEW_TTL) : null;
+  if (!dzt) {
+    const artist = JSON.parse(row.artists)[0]?.name || "";
+    const found = await findOnDeezer({ title: row.title, artist, isrc: row.isrc, durationMs: row.durationMs });
+    dzt = found?.id ? await dzTrack(found.id, PREVIEW_TTL) : null;
+    const bpm = dzt?.bpm && dzt.bpm > 0 ? Math.round(dzt.bpm * 10) / 10 : null;
+    await prisma.track.update({
+      where: { id: row.id },
+      data: {
+        deezerId: dzt ? String(dzt.id) : "none",
+        ...(bpm && !row.bpm ? { bpm, bpmSource: "deezer" } : {}),
+        ...(!row.isrc && dzt?.isrc ? { isrc: dzt.isrc } : {}),
+      },
+    });
+  }
+  return dzt?.preview || null;
 }
